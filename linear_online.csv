@@ -1,0 +1,14 @@
+,ogd_test_risk,ogd_train_risk,test_risk,train_risk
+alpha=100000.0/data=satimage/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.8877836465835571,0.6350637078285217,0.9378302693367004,0.6692570447921753
+alpha=100000.0/data=mushrooms/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.08665681630373,0.0819793194532394,0.2223042845726013,0.2176267802715301
+alpha=100000.0/data=segmentation/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.8926407098770142,0.7376623153686523,0.8025974035263062,0.7489177584648132
+alpha=100000.0/data=tictactoe/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.3027139902114868,0.3903966546058655,0.4676409065723419,0.4425887167453766
+alpha=100000.0/data=pendigits/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.6000728011131287,0.5889738202095032,0.4838064014911651,0.3415211141109466
+alpha=100000.0/data=phishing/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.2201917916536331,0.2261624783277511,0.2420843094587326,0.2263434082269668
+alpha=100000.0/data=yeast/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.7075471878051758,0.6671159267425537,0.7129380106925964,0.6994609236717224
+alpha=100000.0/data=nursery/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.8049382567405701,0.7885802388191223,0.8066357970237732,0.7936728596687317
+alpha=100000.0/data=letter/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.9264000058174132,0.9164000153541564,0.9348000288009644,0.9187999963760376
+alpha=100000.0/data=adult/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.2476228326559066,0.24806509912014,0.2357701957225799,0.2298881113529205
+alpha=100000.0/data=sensorless/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.8295275568962097,0.8251179456710815,0.9098926782608032,0.9062692523002625
+alpha=100000.0/data=fashionmnist/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.5484856963157654,0.5401999950408936,0.2819428443908691,0.2234571427106857
+alpha=100000.0/data=mnist/depth_size=-1/iter_size=10/model_name=LinearModel/ogd_iter_size=1/seed=0/width_size=-1,0.3969142735004425,0.3776285648345947,0.3103714287281036,0.2840857207775116

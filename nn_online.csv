@@ -1,0 +1,14 @@
+,ogd_test_risk,ogd_train_risk,test_risk,train_risk
+alpha=100000.0/data=mushrooms/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.217134416103363,0.2016248106956482,0.121614970266819,0.0817331373691558
+alpha=100000.0/data=pendigits/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.8788209557533264,0.8708151578903198,0.5367540121078491,0.3231441080570221
+alpha=100000.0/data=letter/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.9631999731063844,0.9581000208854676,0.9453999996185304,0.8294000029563904
+alpha=100000.0/data=segmentation/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.9125540852546692,0.7385281324386597,0.8571428656578064,0.6190476417541504
+alpha=100000.0/data=satimage/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.8566988110542297,0.625738263130188,0.763444185256958,0.4009947180747986
+alpha=100000.0/data=nursery/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.8061728477478027,0.7932098507881165,0.805246889591217,0.799691379070282
+alpha=100000.0/data=tictactoe/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.3089770376682281,0.3966597020626068,0.3089770376682281,0.388308972120285
+alpha=100000.0/data=yeast/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.7196765542030334,0.7021563053131104,0.7196765542030334,0.6617250442504883
+alpha=100000.0/data=phishing/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.3180749118328094,0.3312827944755554,0.2216392308473587,0.1642844229936599
+alpha=100000.0/data=adult/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.2477112859487533,0.2482420057058334,0.2543452382087707,0.2405908554792404
+alpha=100000.0/data=sensorless/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.6328365206718445,0.6221713423728943,0.910200297832489,0.8993300199508667
+alpha=100000.0/data=fashionmnist/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.4455428719520569,0.3971714377403259,0.3270857036113739,0.095914289355278
+alpha=100000.0/data=mnist/depth_size=2/iter_size=10/model_name=FullyConnectedModel/ogd_iter_size=1/seed=0/width_size=600,0.5210000276565552,0.4702000021934509,0.2650571465492248,0.0915428549051284
