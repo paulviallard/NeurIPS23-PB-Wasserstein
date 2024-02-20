@@ -1,0 +1,1260 @@
+\documentclass{article}
+\usepackage[nonatbib,final]{neurips_2023}
+
+\RequirePackage[%
+pdfstartview=FitH,%
+breaklinks=true,%
+bookmarks=true,%
+colorlinks=true,%
+linkcolor= blue,
+anchorcolor=blue,%
+citecolor=blue,
+filecolor=blue,%
+menucolor=blue,%
+urlcolor=blue%
+]{hyperref}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{xspace}
+\usepackage{thm-restate}
+\usepackage{cleveref}
+\usepackage{stmaryrd}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{dsfont}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage[numbers]{natbib}
+\usepackage{crossreftools}
+\usepackage{adjustbox}
+\usepackage{amsmath}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% xcolor options
+
+% Paul Tol's "Vibrant" color scheme
+% https://personal.sron.nl/~pault/data/colourschemes.pdf
+\definecolor{blue}{HTML}{0077BB}
+\definecolor{cyan}{HTML}{33BBEE}
+\definecolor{green}{HTML}{009988}
+\definecolor{orange}{HTML}{EE7733}
+\definecolor{red}{HTML}{CC3311}
+\definecolor{magenta}{HTML}{EE3377}
+\definecolor{grey}{HTML}{BBBBBB}
+
+\newcommand\black[1]{\textcolor{black}{#1}}
+\newcommand\blue[1]{\textcolor{blue}{#1}}
+\newcommand\cyan[1]{\textcolor{cyan}{#1}}
+\newcommand\green[1]{\textcolor{green}{#1}}
+\newcommand\orange[1]{\textcolor{orange}{#1}}
+\newcommand\red[1]{\textcolor{red}{#1}}
+\newcommand\magenta[1]{\textcolor{magenta}{#1}}
+\newcommand\grey[1]{\textcolor{grey}{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% cleveref options
+\crefname{equation}{Eq.}{Eqs.}
+\Crefname{equation}{Equation}{Equations}
+\crefname{theorem}{Th.}{Ths.}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{corollary}{Cor.}{Cors.}
+\Crefname{corollary}{Corollary}{Corollaries}
+\crefname{algorithm}{Alg.}{Algs.}
+\Crefname{algorithm}{Algorithm}{Algorithms}
+\crefname{remark}{Rm.}{Rms.}
+\Crefname{remark}{Remark}{Remarks}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{remark}[definition]{Remark}
+
+\input{notations.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Learning via Wasserstein-Based High Probability Generalisation Bounds}
+
+\author{%
+  Paul Viallard\thanks{The authors contributed equally to this work} \\
+  Inria, CNRS, Ecole Normale Supérieure,\\
+  PSL Research University, Paris, France\\
+  \texttt{paul.viallard@inria.fr} \\
+  \And
+  Maxime Haddouche\footnotemark[1]\\
+  Inria, University College London
+  and \\ Université de Lille, France \\
+  \texttt{maxime.haddouche@inria.fr}
+  \AND
+  Umut Şimşekli\\
+  Inria, CNRS, Ecole Normale Supérieure\\
+PSL Research University, Paris, France\\
+  \texttt{umut.simsekli@inria.fr}
+  \And
+  Benjamin Guedj\\
+  Inria and University College London,\\
+  France and UK\\
+  \texttt{benjamin.guedj@inria.fr}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Minimising upper bounds on the population risk or the generalisation gap has been widely used in structural risk minimisation (SRM) -- this is in particular at the core of PAC-Bayesian learning.
+Despite its successes and unfailing surge of interest in recent years, a limitation of the PAC-Bayesian framework is that most bounds involve a Kullback-Leibler (KL) divergence term (or its variations), which might exhibit erratic behavior and fail to capture the underlying geometric structure of the learning problem -- hence restricting its use in practical applications.
+As a remedy, recent studies have attempted to replace the KL divergence in the PAC-Bayesian bounds with the Wasserstein distance.
+Even though these bounds alleviated the aforementioned issues to a certain extent, they either hold in expectation, are for bounded losses, or are nontrivial to minimize in an SRM framework. 
+In this work, we contribute to this line of research and prove novel Wasserstein distance-based PAC-Bayesian generalisation bounds for both batch learning with independent and identically distributed (\iid) data, and online learning with potentially non-\iid\ data.
+Contrary to previous art, our bounds are stronger in the sense that {\it (i)} they hold with high probability, {\it (ii)} they apply to unbounded (potentially heavy-tailed) losses, and {\it (iii)} they lead to optimizable training objectives that can be used in SRM.
+As a result we derive novel Wasserstein-based PAC-Bayesian learning algorithms and we illustrate their empirical advantage on a variety of experiments.
+\end{abstract}
+
+\section{Introduction}
+
+Understanding generalisation is one of the main challenges in statistical learning theory, and even more so in modern machine learning applications.
+Typically, a \emph{learning problem} is described by a tuple $(\H, \Z, \loss)$ consisting of a hypothesis (or predictor) space $\H$, a data space $\Z$, and a loss function $\loss : \H\times \Z \rightarrow \R$.
+The goal is to estimate the \emph{population risk} of a given hypothesis $h$, defined as $\Risk_{\D}(h) = \EE_{\z\sim\D}[\loss(h , \z)]$, where $\D$ denotes the unknown \emph{data distribution} over $\Z$. 
+
+As $\D$ is not known, in practice, a hypothesis $h$ is usually built by (approximately) minimising the \emph{empirical risk}, given by $\Riskhat_{\S}(h) = \frac{1}{m}\sum_{i=1}^{m}\loss(h , \z_i)$, where $\S = \{ \z_i \in \Z \}_{i=1}^{m}$ is a dataset of $m$ data points, independent and identically distributed (\iid) from $\D$. 
+We define the generalisation gap of a hypothesis $h$ as $\Riskhat_{\S}(h) - \Risk_{\D}(h)$.
+
+Developing upper bounds on the generalisation gap, \ie, \emph{generalisation bounds} has been a long-standing topic in statistical learning.
+While a plethora of techniques have been introduced, the PAC-Bayesian framework has gained significant traction over the past two decades to provide non-vacuous generalisation guarantees for complex structures such as neural networks during the training phase (see \citealp{dziugaite2017computing,perez2021progress,perez2021tighter}, among others).
+In these works, the bounds are also used to derive learning algorithms by minimising the right-hand side of a given bound.
+Beyond neural networks, the flexibility of PAC-Bayes learning makes it a useful toolbox to derive both theoretical results and practical algorithms in various learning fields such as reinforcement learning \citep{fard2010pac}, online learning \citep{haddouche2022online}, multi-armed bandits \citep{seldin2011pac,seldin2012pac,sakhi2022pac}, meta-learning \citep{amit2018meta,farid2021generalization,rothfuss2021pacoh,rothfuss2022pac,ding2021bridging} to name but a few. 
+The PAC-Bayesian bounds focus on a \emph{randomised} setting where the hypothesis is drawn from a \emph{data-dependent} distribution $\Q \in\Mcal(\H)$, where $\Mcal(\H)$ denotes the set of probability distributions defined on $\H$.
+A classical PAC-Bayesian result is \cite[Theorem 5]{maurer2004note} (the so-called McAllester bound), which states that, with probability at least $1-\delta$, for any posterior distribution $\Q\in\Mcal(\H)$,
+\begin{align*}
+ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le \sqrt{\frac{\KL(\Q\|\P) + \ln{\frac{2\sqrt{m}}{\delta}}}{2m}},
+\end{align*}
+where $\P \in \Mcal(\H)$ is any data-free distribution and $\KL$ denotes the Kullback-Leibler divergence. 
+In analogy with Bayesian statistics, $\P$ is often called the \emph{prior}, and $\Q$ is called the \emph{posterior} - we refer to \cite{guedj2019primer} for a discussion on these terms.
+
+While PAC-Bayesian bounds remain nowadays of the utmost interest to explain generalisation in various learning problems 
+\citep{letarte2019dichotomize,mhammedi2019pac,nozawa2019pac,mhammedi2020pac,biggs2020differentiable,haddouche2021pac,zantedeschi2021learning,biggs2021margins,biggs2022vacuous,biggs2022margins,cherief2021pac,lotfi2022pac,flynn2022pac,biggs2022tighter,sakhi2022pac,riou2023bayes}, they mostly rely on the $\KL$ divergence or variants which causes two main limitations: {\it (i)} as illustrated in the generative modeling literature, the KL divergence does not incorporate the underlying geometry or topology of the data space $\Z$, hence can behave in an erratic way~\citep{arjovsky2017wasserstein},
+{\it (ii)} the $\KL$ divergence and its variants require the posterior $\Q$ to be absolutely continuous with respect to the prior $\P$.
+However, recent studies \citep{camuto2021fractal} have shown that, in stochastic optimisation, the distribution of the iterates, which is the natural choice for the posterior, can converge to a \emph{singular distribution}, which does not admit a density with respect to the Lebesgue measure.
+Moreover, the structure of the singularity (\ie, the \emph{fractal dimension} of $\Q$) depends on the data sample $\S$ \citep{camuto2021fractal}. 
+Hence, in such a case, it would not be possible to find a suitable prior $\P$ that can dominate $\Q$ for almost every $\S \sim \D^m$, which will trivially make $\KL(\Q\|\P) = +\infty$ and the generalisation bound vacuous. 
+
+Some works have focused on replacing the Kullback-Leibler divergence with more general divergences in PAC-Bayes \citep{alquier2018simpler,ohnishi2021novel,picard2022change}, although the problems arising from the presence of the $\KL$ divergence in the generalisation bounds are actually not specific to PAC-Bayes: information-theoretic bounds \citep{goyal2017pac,xu2017information,russo2020how} also suffer from similar issues as they are based on a mutual information term, which is the $\KL$ divergence between two distributions.
+In this context, as a remedy to these issues introduced by the $\KL$ divergence, \cite{zhang2018optimal,wang2019information,rodriguez2021tighter,lugosi2022generalization} proved analogous bounds that are based on the \emph{Wasserstein distance}, which arises from the theory of optimal transport~\cite{monge1781memoire}.
+As the Wasserstein distance inherits the underlying geometry of the data space and does not require absolute continuity, it circumvents the problems introduced by the $\KL$ divergence.
+Yet, these bounds hold only in expectation, \ie, none of these bounds is holding with high probability over the random choice of the learning sample $\S\sim\D^{m}$.
+
+In the context of PAC-Bayesian learning, the recent works \cite{amit2022integral,chee2021learning} incorporated Wasserstein distances as a complexity measure and proved generalisation bounds based on the Wasserstein distance.
+More precisely, \cite{amit2022integral} proved a high-probability generic PAC-Bayesian bound for bounded losses depending on an integral probability metric \citep{muller1997integral}, which contains the Wasserstein distance as a special case. 
+On the other hand, \cite{chee2021learning} exploited PAC-Bayesian tools to obtain learning strategies with their associated regret bounds based on the Wasserstein distance for the \emph{online learning} setting while requiring a finite hypothesis space and do not deal with generalisation.
+
+\textbf{Contributions.}
+The theoretical understanding of the high-probability generalisation bounds based on the Wasserstein distance is still limited.
+The aim of this paper is not only to prove generalisation bounds (for different learning settings) based on the optimal transport theory but also to propose new learning algorithms derived from our theoretical results.
+\begin{enumerate}[label={\it (\roman*)}]
+    \item Using the supermartingale toolbox introduced in \cite{haddouche2023pac,chugg2023unified}, we prove in \Cref{sec:wasserstein-batch}, novel PAC-Bayesian bounds based on the Wasserstein distance for \iid data.
+    While \cite{amit2022integral} proposed a McAllester-like bound for bounded losses, we propose a Catoni-like bound (see \eg, \citealp[Theorem 4.1]{alquier2016properties}) valid for heavy-tailed losses with bounded order 2 moments.
+    This assumption is less restrictive than assuming subgaussian or bounded losses, which are at the core of many PAC-Bayes results.
+    This assumption also covers distributions beyond subgaussian or subexponential ones (\eg, gamma distributions with a scale smaller than 1, which have an infinite exponential moment). 
+    \item We provide in \Cref{sec:wasserstein-online} the first generalisation bounds based on Wasserstein distances for the online PAC-Bayes framework of \cite{haddouche2022online}.
+    Our results are, again, Catoni-like bounds and hold for heavy-tailed losses with bounded order 2 moments.
+    Previous work \citep{chee2021learning} already provided online strategies mixing PAC-Bayes and Wasserstein distances.
+    However, their contributions focus on the best deterministic strategy, regularised by a Wasserstein distance, with respect to the deterministic notion of regret.
+    Our results differ significantly as we provide the best-regularised strategy (still in the sense of a Wasserstein term) with respect to the notion of generalisation, which is new.
+    \item As our bounds are linear with respect to Wasserstein terms (contrary to those of \citealp{amit2022integral}), they are well suited for optimisation procedures.
+    Thus, we propose the first PAC-Bayesian learning algorithms based on Wasserstein distances instead of KL divergences.
+    For the first time, we design PAC-Bayes algorithms able to output deterministic predictors (instead of distributions over all $\H$) designed from deterministic priors.
+    This is due to the ability of the Wasserstein distance to measure the discrepancy between Dirac distributions.     
+    We then instantiate those algorithms in \Cref{sec:experiments} on various datasets, paving the way to promising practical developments of PAC-Bayes learning. 
+\end{enumerate}
+
+To sum up, we highlight two benefits of PAC-Bayes learning with Wasserstein distance.
+First, it ships with sound theoretical results exploiting the geometry of the predictor space, holding for heavy-tailed losses.
+Such a weak assumption on the loss extends the usefulness of PAC-Bayes with Wasserstein distances to a wide range of learning problems, encompassing bounded losses.
+Second, it allows us to consider deterministic algorithms (\ie, sampling from Dirac measures) designed with respect to the notion of generalisation: we showcase their performance in our experiments.
+
+\textbf{Outline.} \Cref{sec:framework} describes our framework and background, \Cref{sec:wasserstein} contains our new theoretical results and \Cref{sec:experiments} gathers our experiments. 
+\Cref{sec:discussion-supervised} gathers supplementary discussion, \Cref{sec:proofs} contains all proofs of our claims, and \Cref{sec:supplementary-expes} provides insights into our practical results as well as additional experiments.
+
+\section{Our framework}
+\label{sec:framework}
+
+\textbf{Framework.} 
+We consider a Polish predictor space $\H$ equipped with a distance $d$ and a $\sigma$-algebra $\Sigma_{\H}$, a data space $\Z$, and a loss function $\loss : \H\times \Z \rightarrow \R$.
+In this work, we consider Lipschitz functions with respect to $d$.
+We also associate a filtration $(\Fcal_{i})_{i\geq 1}$ adapted to our data $(\z_i)_{i=1,\dots,m}$, and we assume that the dataset $\S$ follows the distribution $\Dcal$.
+In PAC-Bayes learning, we construct a data-driven posterior distribution $\Q\in\Mcal(\H)$ with respect to a prior distribution $\P$. 
+
+\textbf{Definitions.} 
+For all $i$, we denote by $\EE_{i}[\cdot]$ the conditional expectation $\EE[\ \cdot\mid \Fcal_i]$.
+In this work, we consider data-dependent priors.
+A stochastic kernel is a mapping $\P: \cup_{m=1}^\infty\Z^m\times \Sigma_{\H} \rightarrow [0,1]$ where {\it (i)} for any $B\in \Sigma_{\H}$, the function  $\S\mapsto \P(\S,B)$ is measurable, {\it (ii)} for any dataset $\S$, the function $B\mapsto \P(\S,B)$ is a probability measure over $\H$.
+
+In what follows, we consider two different learning paradigms: \emph{batch learning}, where the dataset is directly available, and \emph{online learning}, where data streams arrive sequentially.
+
+\textbf{Batch setting.} 
+We assume the dataset $\S$ to be \iid, so there exists a distribution $\D$ over $\Z$ such that $\Dcal=\D^m$.
+We then define, for a given $h\in\H$, the \emph{risk} to be $\Risk_\D\defeq\EE_{\z\sim \D}[\loss(h,\z)]$ and its empirical counterpart $\Riskhat_{\S} \defeq \frac{1}{m}\sum_{i=1}^m \loss(h,\z_i)$. 
+Our results aim to bound the \emph{expected generalisation gap} defined by $\EE_{h\sim\Q}[ \Risk_{\D}(h) - \Riskhat_{\S}(h)]$.
+We assume that the dataset $\S$ is split into $K$ disjoint sets $\S_1,\dots,\S_K$.
+We consider $K$ stochastic kernels  $\P_1,\dots,\P_K$ such that for any $\S$, the distribution $\P_{i}(\S,.)$ {\it does not} depend on $\S_i$.
+
+\textbf{Online setting.} 
+We adapt the online PAC-Bayes framework of \cite{haddouche2022online}.
+We assume that we have access to a stream of data $\S=(\z_i)_{i=1,\dots,m}$, arriving sequentially, with no assumption on $\Dcal$.
+In online PAC-Bayes, the goal is to define a posterior sequence $(\Q_i)_{i\geq 1}$ from a prior sequence $(\P_i)_{i\geq 1}$, which can be data-dependent.
+We define an \emph{online predictive sequence} $(\P_i)_{i=1\cdots m}$ satisfying: {\it (i)} for all $i$ and dataset $\S$, the distribution $\P_i(S,.)$ is $\Fcal_{i-1}$ measurable and {\it (ii)} there exists $\P_0$ such that for all $i \geq 1$, we have $\P_i(S,.)\gg \P_{0}$. 
+This last condition covers, in particular, the case where $\H$ is an Euclidean space and for any $i$, the distribution $\P_{i,\S}$ is a Dirac mass. 
+All of those measures are uniformly continuous with respect to any Gaussian distribution.
+
+\textbf{Wasserstein distance.}
+In this paper, we focus on the Wasserstein distance of order 1 (\aka, Earth Mover's distance) introduced by \cite{kantorovich1960mathematical} in the optimal transport literature. 
+Given a distance $d: \Acal\times\Acal \to \R$ and a Polish space $(\Acal, d)$, for any probability measures $\AQ$ and $\BQ$ on $\Acal$, the Wasserstein distance is defined by
+\begin{align}
+\W(\AQ, \BQ) \defeq \inf_{\gamma\in \Gamma(\AQ, \BQ)}\LC 
+\EE_{(a, b)\sim\gamma}d(a, b)\RC,\label{eq:wasserstein}
+\end{align}
+where $\Gamma(\AQ, \BQ)$ is the set of joint probability measures $\gamma \in \Mcal(\Acal^2)$ such that the marginals are $\AQ$ and $\BQ$.
+The Wasserstein distance aims to find the probability measure $\gamma\in\Mcal(\Acal^2)$ minimising the expected cost $\EE_{(a, b)\sim\gamma}d(a, b)$.
+We refer the reader to \cite{villani2009optimal,peyre2019computational} for an introduction to optimal transport.
+
+\section{Wasserstein-based PAC-Bayesian generalisation bounds}
+\label{sec:wasserstein}
+
+We present novel high-probability PAC-Bayesian bounds involving Wasserstein distances instead of the classical Kullback-Leibler divergence. 
+Our bounds hold for heavy-tailed losses (instead of classical subgaussian and subexponential assumptions), extending the remits of \cite[Theorem 11]{amit2022integral}.
+We exploit the supermartingale toolbox, recently introduced in PAC-Bayes framework by \cite{haddouche2023pac,chugg2023unified,jang2023tighter}, to derive bounds for both batch learning (\Cref{theorem:supervised-ht,theorem:supervised-nnl}) and online learning (\Cref{theorem:online-ht,theorem:online}).
+
+
+\subsection{PAC-Bayes for batch learning with \iid data}
+\label{sec:wasserstein-batch}
+
+In this section, we use the batch setting described in \Cref{sec:framework}.
+We state our first result, holding for heavy-tailed losses admitting order 2 moments.
+Such an assumption is in line, for instance, with reinforcement learning with heavy-tailed reward (see, \eg, \citealp{liu2011multi,lu2019optimal,zhuang2021regret}).
+
+\begin{restatable}{theorem}{theoremsupervisedht}\label{theorem:supervised-ht}
+We assume the loss $\loss$ to be $L$-Lipschitz.
+Then, for any $\delta\in(0,1]$, for any sequence of positive scalar $(\lambda_i)_{i\in \{1,\dots,K\}}$, with probability at least $1-\delta$ over the sample $\S$, the following holds for the distributions $\P_{i,\S}\defeq \P_i(\S,.)$ and for any $\Q\in\Mcal(\H)$: 
+\begin{multline*}
+        \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big]  \\ \leq    \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_{i,\S}) + \frac{1}{m}\sum_{i=1}^{K}   \frac{\ln\left( \frac{K}{\delta}  \right)}{\lambda_i} + \frac{\lambda_i}{2}\left(\EE_{h\sim \P_{i,\S}}\LB\Vhat_{|\S_i|}(h) + V_{|\S_i|}(h) \RB\right), 
+    \end{multline*}
+where $\P_{i,\S}$ {\it does not} depend on $\S_i$. 
+Also, for any $i,|S_i|$, we have $\Vhat_{|\S_i|}(h)= \sum_{\z\in \S_i} \left(\loss(h,\z) - R_\D(h)\right)^2$ and $V_{|\S_i|}(h) = \EE_{\S_i}\LB\Vhat_{|\S_i|}(h)\RB$.
+\end{restatable}
+
+The proof is deferred to \Cref{sec:proof-supervised-ht}.
+While \Cref{theorem:supervised-ht} holds for losses taking values in $\R$, many learning problems rely in practice on more constrained losses.
+This loss can be bounded as in the case of, \eg, supervised learning or the multi-armed bandit problem \citep{slivkins19intro}, or simply non-negative as in regression problems involving the quadratic loss (studied, for instance, in \citealp{catoni2016pac,catoni2017dimension}).
+Using again the supermartingale toolbox, we prove in \Cref{theorem:supervised-nnl} a tighter bound holding for heavy-tailed non-negative losses. 
+
+\begin{restatable}{theorem}{theoremsupervisednnl}
+\label{theorem:supervised-nnl}
+We assume our loss $\loss$ to be non-negative and $L$-Lipschitz. We also assume that, for any $1\leq i\leq K$, for any dataset$\S$, we have $\EE_{h\sim \P_{i}(.,\S), z\sim \D}\LB \loss(h,z)^2 \RB \leq 1$ (\emph{bounded order 2 moments for priors}).
+Then, for any $\delta\in(0,1]$, with probability at least $1-\delta$ over the sample $\S$, the following holds for the distributions $\P_{i,\S}\defeq \P_i(\S,.)$ and for any $\Q\in\Mcal(\H)$: 
+\begin{align*}
+\ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le \sum_{i=1}^{K} \frac{2|\S_i|L}{m} \W(\Q, \P_{i,\S}) + \sum_{i=1}^{K} \sqrt{\frac{2|\S_i|\ln\frac{K}{\delta}}{m^2}}, 
+\end{align*}
+where $\P_{i,\S}$ {\it does not} depend on $\S_i$.
+\end{restatable}
+
+Note that when the loss function takes values in $[0,1]$, an alternative strategy allows tightening the last term of the bound by a factor $\nicefrac{1}{2}$.
+This result is rigorously stated in \Cref{theorem:supervised_tight} of \Cref{sec:alt-proof-supervised}. 
+
+\textbf{High-level ideas of the proofs.}
+\Cref{theorem:supervised-ht,theorem:supervised-nnl} are structured around two tools.
+First, we exploit the Kantorovich-Rubinstein duality \cite[Remark 6.5]{villani2009optimal} to replace the change of measure inequality \cite{csizar1975divergence,donsker1976asymptotic}; this allows us to consider a Wasserstein distance instead of a KL term.
+Then, we exploit the supermartingales used in \cite{haddouche2023pac,chugg2023unified} alongside Ville's inequality (instead of Markov's one) to obtain a high probability bound holding for heavy-tailed losses.
+Combining those techniques provides our PAC-Bayesian bounds.
+
+\textbf{Analysis of our bounds.} Our results hold for Lipschitz losses and allow us to consider heavy-tailed losses with bounded order 2 moments.
+While such an assumption on the loss is more restrictive than in classical PAC-Bayes, allowing heavy-tailed losses is strictly less restrictive. 
+While \Cref{theorem:supervised-ht} is our most general statement, \Cref{theorem:supervised-nnl} allows recovering a tighter result (without empirical variance terms) for non-negative heavy-tailed losses. 
+An important point is that the variance terms are considered with respect to the prior distributions $\P_{i,\S}$  and not $\Q$ as in \cite{haddouche2023pac,chugg2023unified}. This is crucial as these papers rely on the implicit assumption of order 2 moments, holding uniformly for all $\Q\in\Mcal(\H)$, while we only require this assumption for the prior distributions $(\P_{i,\S})_{i=1,\dots,K}$.
+Such an assumption is in line with the PAC-Bayesian literature, which often relies on bounding an averaged quantity with respect to the prior.
+This strength is a consequence of the Kantorovich-Rubinstein duality.
+To illustrate this, consider \iid data with distribution $\D$ admitting a finite variance bounded by $V$ and the loss $\loss(h,z)= |h-z|$ where both $h$ and $z$ lie in the real axis.
+Notice that in this particular case, we can imagine that $z$ is a data point and $h$ is a hypothesis outputting the same scalar for all data.
+To satisfy the assumption of \Cref{theorem:supervised-nnl}, it is enough, by Cauchy Schwarz, to satisfy  $\EE_{h\sim \P_{i,\S},z\sim\S}[\loss(h,z)^2] \le \EE[h^2] + 2V\EE[|h|] +V^2 \leq 1$ for all $\P_{i,\S}$.
+On the contrary, \cite{haddouche2023pac,chugg2023unified} would require this condition to hold for all $\Q$, which is more restrictive.
+Finally, an important point is that our bound allows us to consider Dirac distributions with disjoint support as priors and posteriors.
+On the contrary, KL divergence forces us to consider a non-Dirac prior for our bound to be non-vacuous. 
+This allows us to retrieve a uniform-convergence bound described in \Cref{corollary:supervised-nnl}.
+
+\textbf{Role of data-dependent priors.} 
+\Cref{theorem:supervised-ht,theorem:supervised-nnl} allow the use of prior distributions depending possibly on a fraction of data.
+Such a dependency is crucial to control our sum of Wasserstein terms as we do not have an explicit convergence rate.
+For instance, for a fixed $K$, consider a compact predictor space $\H$, a bounded loss and the \emph{Gibbs posterior} defined as $d\Q(h) \propto \exp\left(-\lambda \Riskhat_{\S}(h)\right)dh$ where $\lambda>0$.
+Also define for any $i$ and $\S$, the distribution $d\P_{i,\S}(h) \propto \exp\left(-\lambda \Risk_{\S/\S_i}(h)\right)dh$. Then, by the law of large numbers, when $m$ goes to infinity, for any $h$, both $\Risk_S(h)$ and $(\Risk_{\S/\S_i}(h))_{i=1,\dots,m}$ converge to $\Risk_\D(h)$. 
+This ensures, alongside with the dominated convergence theorem, that for any $i$, the Wasserstein distance $\W(\Q,\P_{i,\S})$ goes to zero as $m$ goes to infinity.  
+
+\textbf{Comparison with the literature.} \cite[][Theorem 11]{amit2022integral} establishes a PAC-Bayes bound with Wasserstein distance valid for bounded losses being Lipschitz with high probability. While we circumvent the first assumption, the second one is less restrictive than actual Lipschitzness and can also be used in our setting. Also \cite[Theorem 12]{amit2022integral} proposes an explicit convergence for finite predictor classes. We show in \Cref{sec:discussion-supervised} that we are also able to recover such a convergence. 
+
+\textbf{Towards new PAC-Bayesian algorithms.} From \Cref{theorem:supervised-nnl}, we derive a new PAC-Bayesian algorithm for Lipschitz non-negative losses:
+\begin{equation}
+    \label{eq:batch-alg}
+    \argmin_{\Q\in\Mcal(\H)} \EE_{h\sim \Q}\left[\Riskhat_{\S}(h)\right] + \sum_{i=1}^{K} \frac{2|\S_i|L}{m} \W(\Q, \P_{i,\S}).
+\end{equation}
+\Cref{eq:batch-alg} uses Wasserstein distances as regularisers and allows the use of multiple priors. 
+We compare ourselves to the classical PAC-Bayes algorithm derived from \cite[][Theorem 1.2.6]{catoni2007pac} (which leads to Gibbs posteriors):
+\begin{equation}
+    \label{eq:catoni-alg}
+    \argmin_{\Q\in\Mcal(\H)} \EE_{h\sim \Q}\left[\Riskhat_{\S}(h)\right] +  \frac{\operatorname{KL}(\Q,\P)}{\lambda}.
+\end{equation}
+Considering a Wasserstein distance in \Cref{eq:batch-alg} makes our algorithm more flexible than in \Cref{eq:catoni-alg}, the KL divergence implies absolute continuity \wrt the prior $\P$.
+Such an assumption is not required to use \Cref{eq:batch-alg} and covers the case of prior Dirac distributions.
+Finally, \Cref{eq:batch-alg} relies on a fixed value $K$ whose value is discussed below.
+
+\textbf{Role of $K$.} 
+We study the cases $K=1$, $\sqrt{m}$, and $m$ in \Cref{theorem:supervised-nnl}. We refer to \Cref{sec:discussion-supervised} for a detailed treatment.
+First of all, when $K=1$, we recover a classical batch learning setting where all data are collected at once.
+In this case, we have a single Wasserstein with no convergence rate coupled with a statistical ersatz of $\sqrt{\nicefrac{\ln(1/\delta)}{m}}$.
+However, similarly to \cite[][Theorem 12]{amit2022integral}, in the case of a finite predictor class, we are able to recover an explicit convergence rate.
+The case $K=\sqrt{m}$ provides a tradeoff between the number of points required to have good data-dependent priors (which may lead to a small $\sum_{i=1}^{\sqrt{m}}\W(\Q, \P_i)$) and the number of sets required to have an explicit convergence rate. 
+Finally, the case $K=m$ leads to a vacuous bound as we have the incompressible term $\sqrt{\ln\left(\nicefrac{m}{\delta}\right)}$, which makes the bound vacuous for large values of $m$.
+This means that the batch setting is not fitted to deal with a data stream arriving sequentially. To mitigate that weakness, we propose in \Cref{sec:wasserstein-online} the first online PAC-Bayes bounds with Wasserstein distances.
+
+\subsection{Wasserstein-based generalisation bounds for online learning}
+\label{sec:wasserstein-online}
+Here, we use the online setting described in \Cref{sec:framework} and derive the first online PAC-Bayes bounds involving Wasserstein distances in \Cref{theorem:online-ht,theorem:online}. 
+Online PAC-Bayes bounds are meant to derive online counterparts of classical PAC-Bayesian algorithms \cite{haddouche2022online}, where the KL-divergence acts as a regulariser.
+We show in  \Cref{theorem:online-ht,theorem:online} that it is possible to consider online PAC-Bayesian algorithms where the regulariser is a Wasserstein distance, which allows us to optimise on measure spaces without a restriction of absolute continuity.
+
+\begin{restatable}{theorem}{theoremonlineht}\label{theorem:online-ht}
+ We assume our loss $\loss$ to be $L$-Lipschitz.
+Then, for any $\delta\in(0,1]$, with probability at least $1-\delta$ over the sample $\S$, the following holds for the distributions $\P_{i,\S}\defeq \P_i(\S,.)$ and for any sequence $(\Q_i)_{i=1\cdots m}\in\Mcal(\H)^m$:
+\begin{multline*}
+\sum_{i=1}^m \EE_{h_i\sim \Q_{i}} \Big[\EE[\loss(h_i,\z_i) \mid \Fcal_{i-1}] - \loss(h_i,\z_i) \Big]  \le 2L\sum_{i=1}^{m}\W(\Q_{i}, \P_{i,\S}) \\
++ \frac{\lambda}{2}\sum_{i=1}^m \EE_{h_i\sim \P_{i,\S}}\left[ \Vhat_i(h_i,\z_i) + V_i(h_i) \right]+\frac{\ln(1/\delta)}{\lambda}, 
+\end{multline*}
+where for all $i$, $\Vhat_i(h_i,\z_i)= (\loss(h_i,\z_i)-\EE_{i-1}[\loss(h_i,\z_i)])^2$ is the conditional empirical variance at time $i$ and $V_i(h_i)= \EE_{i-1}[\Vhat(h_i,\z_i)]$ is the true conditional variance.
+\end{restatable}
+
+The proof is deferred to \Cref{sec:proof-online-ht}.
+We also provide the following bound, being an online analogous of \Cref{theorem:supervised-nnl}, valid for non-negative heavy-tailed losses.
+
+
+\begin{restatable}{theorem}{theoremonline}
+\label{theorem:online}
+We assume our loss $\loss$ to be non-negative and $L$-Lipschitz.
+We also assume that, for any $i,\S$, $\EE_{h\sim \P_{i}(.,\S)}\LB \EE_{i-1}[\loss(h,\z_i)^2] \RB \leq 1$ (\emph{bounded conditional order 2 moments for priors}).
+Then, for any $\delta\in(0,1]$, with probability at least $1-\delta$ over the sample $\S$, any online predictive sequence (used as priors) $(\P_i)_{i\geq 1}$, we have with probability at least $1-\delta$ over the sample $S\sim\D$, the following, holding for the data-dependent measures $\P_{i,\S}\defeq \P_i(S,.)$ and any posterior sequence $(\Q_i)_{i\geq 1}$:
+\begin{align*}
+\frac{1}{m}\sum_{i=1}^m \EE_{h_i\sim \Q_{i}} \Big[\EE[\loss(h_i,\z_i) \mid \Fcal_{i-1}] - \loss(h_i,\z_i) \Big]  \le \frac{2L}{m}\sum_{i=1}^{m}\W(\Q_{i}, \P_{i,\S}) + \sqrt{\frac{2\ln\LP\frac{1}{\delta}\RP}{m}}.
+\end{align*}
+\end{restatable}
+The proof is deferred to \Cref{sec:proof-online}.
+
+\textbf{Analysis of our bounds.} 
+\Cref{theorem:online-ht,theorem:online} are, to our knowledge, the first results involving Wasserstein distances for online PAC-Bayes learning.
+They are the online counterpart of \Cref{theorem:supervised-ht,theorem:supervised-nnl}, and the discussion of \Cref{sec:wasserstein-batch} about the involved assumptions also apply here.
+The sum of Wasserstein distances involved here is a consequence of the online setting and must grow sublinearly for the bound to be tight.
+For instance, when $(\Q_i=\delta_{h_i})_{i\geq1}$ is the output of an online algorithm outputting Dirac measures and $\P_{i,\S}= \Q_{i-1}$, the sum of Wasserstein is exactly $\sum_{i=1}^m d(h_i,h_{i-1})$.
+This sum has to be sublinear for the bound to be non-vacuous, and the tightness depends on the considered learning problem. 
+An analogous of this sum can be found in dynamic online learning \cite{zinkevich2003online} where similar sums appear as \emph{path lengths} to evaluate the complexity of the problem.  
+
+\textbf{Comparison with literature.}
+We compare our results to existing PAC-Bayes bounds for martingales of \cite{seldin2012pac}. 
+\cite[Theorem 4]{seldin2012pac} is a PAC-Bayes bound for martingales, which controls an average of martingales, similar to our \Cref{theorem:supervised-ht}.
+Under a boundedness assumption, they recover a McAllester-typed bound, while \Cref{theorem:supervised-ht} is more of a Catoni-typed result.
+Also, \cite[Theorem 7]{seldin2012pac} is a Catoni-typed bound involving a conditional variance, similar to our \Cref{theorem:online}.
+They require to bound uniformly the variance on all the predictor sets, while we only assume averaged variance with respect to priors, which is what we required to perform \Cref{theorem:online}.
+
+\textbf{A new online algorithm.}
+\cite{haddouche2022online} derived from their main theorem, an online counterpart of \Cref{eq:catoni-alg}, proving it comes with guarantees.
+Similarly, we exploit \Cref{theorem:online} to derive the online counterpart of \Cref{eq:batch-alg}, from the data-free initialisation $\Q_1$
+
+\begin{equation}
+    \label{eq:online-alg}
+    \forall i \geq 1,\ \ \Q_i \in \argmin_{\Q\in\Mcal(\H)} \EE_{h\sim \Q}\left[\loss(h_i, \z_i)\right] + 2L\W(\Q, \P_{i,\S}).
+\end{equation}
+
+We highlight the merits of the algorithm defined by \Cref{eq:online-alg}, alongside with the one from \Cref{eq:batch-alg}, in \Cref{sec:experiments}.
+
+\section{Learning via Wasserstein regularisation}
+\label{sec:experiments}
+
+\Cref{theorem:supervised-nnl,theorem:online} are designed to be informative on the generalisation ability of a single hypothesis even when Dirac distributions are considered.
+In particular, our results involve Wasserstein distances acting as regularisers on $\H$. 
+In this section, we show that a Wasserstein regularisation of the learning objective, which comes from our theoretical bounds, helps to better generalise in practice.
+Inspired by \Cref{eq:batch-alg,eq:online-alg}, we derive new PAC-Bayesian algorithms for both batch and online learning involving a Wasserstein distance (see \Cref{sec:algo}), we describe our experimental framework in \Cref{sec:exp-fram} and we present some of the results in \Cref{sec:results}.
+Additional details, experiments, and discussions are gathered in \Cref{sec:supplementary-expes} due to space constraints. 
+All the experiments are reproducible with the source code provided on GitHub at \url{https://github.com/paulviallard/NeurIPS23-PB-Wasserstein}.
+
+\subsection{Learning algorithms}
+\label{sec:algo}
+
+\textbf{Classification.} 
+In the classification setting, we assume that the data space $\Z=\X{\times}\Y$ is composed of a $d$-dimensional \textit{input space} $\X=\{ \x \in \R^d \;|\; \|\x\|_2 \le 1 \}$ and a finite \textit{label space} $\Y=\{1,\dots, |\Y|\}$ with $|\Y|$ labels.
+We aim to learn models $h_{\wbf}: \R^d\to \R^{|\Y|}$ parameterised by a weight vector $\wbf$ that outputs, given an input $\x\in\X$, a score $h_{\wbf}(\x)[y'] \in \R$ for each label $y'$. 
+This score allows us to assign a label to $\x\in\X$; to check if $h_{\wbf}$ classifies correctly the example $(\x, y)$, we use the {\it classification loss} defined by $\loss^{c}(h_{\wbf}, (\x, y)) \defeq \mathds{1}\left[ h_{\wbf}(\x)[y] - \max_{y'\ne y} h_{\wbf}(\x)[y'] \le 0 \right]$, where $\mathds{1}$ denotes the indicator function.
+
+\textbf{Batch algorithm.} In the batch setting, we aim to learn a parametrised hypothesis $h_{\wbf}\in\H$ that minimises the population classification risk $\Rfrak_{\D}(h_{\wbf}) = \EE_{(\x, y)\sim\D}\loss^{c}(h_{\wbf}, (\x, y))$ that we can only estimate through the empirical classification risk $\Rfrak_{\S}(h_{\wbf}) = \frac{1}{m}\sum_{i=1}^{m}\loss^{c}(h_{\wbf}, (\x_i, y_i))$.
+To learn the hypothesis, we start from \Cref{eq:batch-alg}, when the distributions $\Q$ and $\P_1,\dots, \P_K$ are Dirac masses, localised at $h_{\wbf}, h_{\wbf_1},\dots h_{\wbf_K}\in\H$ respectively.
+Indeed, in this case, $\W(\Q, \P_{i,\S}) = d(h_{\wbf}, h_{\wbf_i})$ for any $i$.
+However, the loss $\loss^{c}(.,\z)$ is not Lipschitz and the derivatives are zero for all examples $\z\in\X\times\Y$, which prevents its use in practice to obtain such a hypothesis $h_{\wbf}$.
+Instead, for the population risk $\Risk_{\D}(h)$ and the empirical risk $\Riskhat_{\S}(h)$ (in \Cref{theorem:supervised-nnl} and \Cref{eq:batch-alg}), we consider the loss $\loss(h, (\x, y)) = \frac{1}{|\Y|}\sum_{y'\ne y} \max(0, 1{-} \eta(h[y]{-}h[y']))$, which is $\eta$-Lipschitz \wrt the outputs $h[1],\dots, h[|\Y|]$.
+This loss has subgradients everywhere, which is convenient in practice.
+We go a step further by {\it (a)}  setting $L=\frac{1}{2}$ and {\it (b)} adding a parameter $\varepsilon>0$ to obtain the objective
+\begin{align}
+    \label{eq:batch-alg-exp}
+    \argmin_{h_{\wbf}\in\H}\LC \Riskhat_{\S}(h_{\wbf}) + \varepsilon\LB\sum_{i=1}^{K} \frac{|\S_i|}{m} d\LP h_\wbf,h_{\wbf_i}\RP\RB\RC.
+\end{align}
+To (approximately) solve \Cref{eq:batch-alg-exp}, we propose a two-step algorithm.
+First, \textsc{Priors Learning} learns $K$ hypotheses $h_{\wbf_1}, \dots, h_{\wbf_K} \in \H$ by minimising the empirical risk via stochastic gradient descent.
+Second, \textsc{Posterior Learning} learns the hypothesis $h_{\wbf}\in\H$ by minimising the objective associated with \Cref{eq:batch-alg-exp}.
+More precisely, \textsc{Priors Learning} outputs the hypotheses $h_{\wbf_1},\cdots,h_{\wbf_K}$, obtained by minimising the empirical risk through mini-batches.
+Those batches are designed such that for any $i$, the hypothesis $h_{\wbf_i}$ does not depend on $\S_i$.
+Then, given $h_{\wbf_1}, \dots, h_{\wbf_K} \in \H$, \textsc{Posterior Learning} minimises the objective in \Cref{eq:batch-alg-exp} with mini-batches.
+Those algorithms are presented in \Cref{alg:batch} of \Cref{sec:supplementary-expes}.
+While $\varepsilon$ is not suggested by \Cref{eq:batch-alg}, it helps to control the impact of the regularisation in practice.
+\Cref{eq:batch-alg-exp} then optimises a tradeoff between the empirical risk and the regularisation term $\varepsilon\sum_{i=1}^{K} \frac{|\S_i|}{m} d(h_{\wbf}, h_{\wbf_i})$.
+
+\textbf{Online algorithm.} Online algorithms output, at each time step $i \in \{1, \dots, m\}$, a new hypothesis $h_{\wbf_i}$. 
+From \Cref{eq:online-alg}, particularised to a sequence of Dirac distributions (localised in $h_{\wbf_1},\cdots,h_{\wbf_K})$, we design a novel online PAC-Bayesian algorithm with a Wasserstein regulariser:
+\begin{align}
+    \label{eq:online-alg-exp}
+    \forall i \geq 1,\ \ h_i\in \argmin_{h_{\wbf}\in \H} \loss(h_{\wbf}, \z_i) +d\LP h_{\wbf},h_{\wbf_{i-1}}\RP \ \ \text{\st} \ \ d\LP h_{\wbf},h_{\wbf_{i-1}}\RP \le 1.
+\end{align}
+According to \Cref{theorem:online}, such an algorithm aims to bound the {\it population cumulative classification loss} $\Cfrak_{\D} = \sum_{i=1}^{m}\EE[\loss^{c}(h_{\wbf_i},\z_i) \mid \Fcal_{i-1}]$.
+Note that we added the constraint $d\LP h_{\wbf},h_{\wbf_{i-1}}\RP \le 1$ compared to \Cref{eq:online-alg}. 
+This constraint ensures that the new hypothesis $h_{\wbf_i}$ is not too far from $h_{\wbf_{i-1}}$ (in the sense of the distance $\|\cdot\|_2$).
+Note that the constrained optimisation problem in \Cref{eq:online-alg-exp} can be rewritten in an unconstrained form (see \cite{boyd2004convex}) thanks to a barrier $B(\cdot)$ defined by $B(a)=0$ if $a\le 0$ and $B(a)=+\infty$ otherwise; we have 
+\begin{align}
+    \label{eq:online-alg-exp-2}
+    \forall i \geq 1,\ \ h_i\in \argmin_{h_{\wbf}\in \H} \loss(h_{\wbf}, \z_i) + d\LP h_{\wbf},h_{\wbf_{i-1}}\RP+ B(d\LP h_{\wbf},h_{\wbf_{i-1}}\RP-1).
+\end{align}
+When solving the problem in \Cref{eq:online-alg-exp-2} is not feasible, we approximate it with a log barrier of \cite{kervadec2022constrained} (suitable in a stochastic gradient setting); given a parameter $t>0$, the log barrier extension is defined by $\Bhat(a) = -\frac{1}{t}\ln(-a)$ if $a\le -\frac{1}{t^2}$ and $\Bhat(a) = ta-\frac{1}{t}\ln(\frac{1}{t^2})+\frac{1}{t}$ otherwise.
+We present in \Cref{sec:supplementary-expes} \Cref{alg:online} that aims to (approximately) solve \Cref{eq:online-alg-exp-2}.
+To do so, for each new example $(\x_i, y_i)$, the algorithm runs several gradient descent steps to optimise \Cref{eq:online-alg-exp-2}.
+
+
+\subsection{Experimental framework}
+\label{sec:exp-fram}
+
+In this part, we assimilate the predictor space $\H$ to the parameter space $\R^d$.
+Thus, the distance $d$ is the Euclidean distance between two parameters: $d\LP h_{\wbf},h_{\wbf'}\RP = \|\wbf{-}\wbf'\|_2$.
+This implies that the Lipschitzness of $\loss$ has to be taken \wrt $\wbf$ instead of $h_{\wbf}$.
+
+\textbf{Models.} 
+We consider that the models are either linear or neural networks (NN).
+Linear models are defined by $h_{\wbf}(\x)=W\x+b$, where $W\in\R^{|\Y|\times d}$ is the weight matrix, $b\in\R^{|\Y|}$ is the bias, and $\wbf=\vect(\{W, b\})$ its vectorisation; the vector $\wbf$ with the zero vector.
+Thanks to the definition of $\X$, we know from \Cref{lemma:lipschitz-linear} (and the composition of Lipschitz functions) that the loss is $\sqrt{2}\eta$-Lipschitz \wrt $\wbf$.
+For neural networks, we consider fully connected ReLU neural networks with $L$ hidden layers and $D$ nodes, where the leaky ReLU activation function $\ReLU: \R^D\to\R^D$ applies elementwise $x\mapsto \max(x, 0.01x)$.
+More precisely, the network is defined by $h_{\wbf}(\x) = Wh^{L}(\cdots h^{1}(\x))+b$ where $W\in \R^{|\Y|\times D}$, $b\in\R^{|\Y|}$. Each layer $h^{i}(\x)=\ReLU(W_i\x+b_i)$ has a weight matrix $W_i\in \R^{D\times D}$ and bias $b_i\in \R^{D}$ except for $i=1$ where we have $W_1\in \R^{D\times d}$. 
+The weights $\wbf$ are also the vectorisation $\wbf=\vect(\{W, W_{L}, \dots, W_1, b, b_{L}, \dots, b_1\})$. 
+We have precised in \Cref{l:lip-nn} that our loss is Lipschitz \wrt the weights $\wbf$.
+We initialise the network similarly to \cite{dziugaite2017computing} by sampling the weights from a Gaussian distribution with zero mean and a standard deviation of $\sigma=0.04$; the weights are further clipped between $-2\sigma$ and $+2\sigma$.
+Moreover, the values in the biases $b_1,\dots, b_L$ are set to 0.1, while the values for $b$ are set to $0$.
+In the following, we consider $D=600$ and $L=2$; more experiments are considered in the appendix.
+
+\textbf{Optimisation.} 
+To perform the gradient steps, we use the COCOB-Backprop optimiser~\cite{orabona2017training} (with parameter $\alpha=10000$).\footnote{The parameter $\alpha$ in COCOB-Backprop can be seen as an initial learning rate; see \cite{orabona2017training}.}
+This optimiser is flexible as the learning rate is adaptative and, thus, does not require hyperparameter tuning.
+For \Cref{alg:batch}, which solves \Cref{eq:batch-alg-exp}, we fix a batch size of $100$, \ie, $|\Ucal|=100$, and the number of epochs $T$ and $T'$ are fixed to perform at least $20000$ iterations.
+Regarding \Cref{alg:online}, which solves \Cref{eq:online-alg-exp-2}, we set $t=100$ for the log barrier, which is enough to constrain the weights and the number of iterations to $T=10$.
+
+\textbf{Datasets.} 
+We study the performance of \Cref{alg:batch,alg:online} on UCI datasets~\citep{dua2017uci} along with MNIST~\citep{lecun1998mnist} and FashionMNIST~\citep{xiao2017fashion}.
+We also split all the data (from the original training/test set) in two halves; the first part of the data serves in the algorithm (and is considered as a training set), while the second part is used to approximate the population risks $\Rfrak_{\D}(h)$ and $\Cfrak_{\D}$ (and considered as a testing set).
+
+\subsection{Results}
+\label{sec:results}
+
+We present in \Cref{tab:expe} the performance of \Cref{alg:batch,alg:online} compared to the Empirical Risk Minimisation (ERM) and the Online Gradient Descent (OGD) with the COCOB-Backprop optimiser.
+\Cref{tab:linear_batch,tab:nn_batch} present the results of \Cref{alg:batch} for the \iid setting on linear and neural networks respectively, while \Cref{tab:linear_online,tab:nn_online} present the results of \Cref{alg:online} for the online case.
+
+\begin{table}[ht]
+     \caption{%
+Performance of \Cref{alg:batch,alg:online} compared respectively to ERM and OGD on different datasets on linear and neural network models.
+For the \iid setting, we consider $\varepsilon=\nicefrac{1}{m}$ and $\varepsilon=\nicefrac{1}{\sqrt{m}}$ and with $K=0.2\sqrt{m}$. 
+For each method, we plot the empirical risk $\Rfrak_{\S}(h)$ or $\Cfrak_{\S}$ with its associated test risk $\Rfrak_{\D}(h)$ or $\Cfrak_{\D}$.
+The risk in {\bf bold} corresponds to the lowest one among the ones considered.
+For the online case, the two population risks are \underline{underlined} when the absolute difference is lower than 0.05.
+     }
+    \hspace{0.5cm}\begin{subtable}{0.54\textwidth}
+        \centering
+        \caption{Linear model -- batch learning}
+        \include{paper_linear_batch}
+       \label{tab:linear_batch}
+    \end{subtable}
+    \hfill
+    \begin{subtable}{0.45\textwidth}
+        \centering
+        \caption{Linear model -- online learning}
+        \include{paper_linear_online}
+        \label{tab:linear_online}
+    \end{subtable}
+    \begin{subtable}{0.54\textwidth}
+        \centering
+        \caption{NN model -- batch learning}
+        \include{paper_nn_batch}
+       \label{tab:nn_batch}
+    \end{subtable}
+    \hfill
+    \hspace{0.5cm}\begin{subtable}{0.45\textwidth}
+        \centering
+        \caption{NN model -- online learning}
+        \include{paper_nn_online}
+        \label{tab:nn_online}
+     \end{subtable}
+     \label{tab:expe}
+     \vspace{-10pt}
+\end{table}
+
+\textbf{Analysis of the results.} In batch learning, we note that the regularisation term brings generalisation improvements compared to the empirical risk minimisation.
+Indeed, our batch algorithm (\Cref{alg:batch}) has a lower population risk $\Rfrak_{\D}(h)$ on 11 datasets for the linear models and 9 datasets for the neural networks. In particular, notice that NNs obtained from \Cref{alg:batch} are more efficient than the ones obtained from ERM on \textsc{MNIST} and \textsc{FashionMNIST}, which are the more challenging datasets.
+This suggests that the regularisation term helps to generalise well.
+For the online case, the performance of the linear models obtained from our algorithm (\Cref{alg:online}) and by OGD are comparable: we have a tighter population classification risk $\Rfrak_{\D}(h)$ on $5$ datasets over $13$. 
+However, notice that the risk difference is less than $0.05$ on $6$ datasets.
+The advantage of \Cref{alg:online} is more pronounced for neural networks: we improve the performance in all datasets except {\sc adult} and {\sc sensorless}.
+Hence, this confirms that optimising the regularised loss $\loss(h_{\wbf}, \z_i) + \|\wbf{-}\wbf_{i-1}\|$ brings a good advantage compared to the loss $\loss(h_{\wbf}, \z_i)$ only. A possible explanation would be that OGD suffers from underfitting (with a high empirical risk $\Cfrak_{\D}$) while we are able to control overfitting through a regularisation term.
+Indeed, only one gradient descent step is done for each new datum $(\x_i, y_i)$, which might not be sufficient to decrease the loss. 
+Instead, our method solves the problem associated with \Cref{eq:online-alg-exp-2} and constrains the descent with the norm $\|\wbf-\wbf_{i-1}\|$.
+
+\section{Conclusion and Perspectives}
+
+We derived novel generalisation bounds based on the Wasserstein distance, both for batch and online learning, allowing for the use of deterministic hypotheses through PAC-Bayes.
+We derived new learning algorithms which are inspired by the bounds, with remarkable empirical performance on a number of datasets: we hope our work can pave the way to promising future developments (both theoretical and practical) of generalisation bounds based on the Wasserstein distance.
+Given the mostly theoretical nature of our work, we do not foresee an immediate negative societal impact, although we hope a better theoretical understanding of generalisation will ultimately benefit practitioners of machine learning algorithms and encourage virtuous initiatives.
+
+\section{Acknowledgements}
+
+We warmly thank the reviewers who provided insightful comments and suggestions which greatly helped us improve our manuscript.
+P.V. and U.S. are partially supported by the French government under the management of Agence Nationale de la Recherche as part of the ``Investissements d’avenir'' program, reference ANR-19-P3IA-0001 (PRAIRIE 3IA Institute).
+U.S. is also partially supported by the European Research Council Starting Grant DYNASTY – 101039676.
+B.G. acknowledges partial support by the U.S. Army Research Laboratory and the U.S. Army Research Office, and by the U.K. Ministry of Defence and the U.K. Engineering and Physical Sciences Research Council (EPSRC) under grant number EP/R013616/1.
+B.G. acknowledges partial support from the French National Agency for Research, grants ANR-18-CE40-0016-01 and ANR-18-CE23-0015-02.
+
+\bibliography{main}
+\bibliographystyle{alpha}
+
+\newpage
+
+\appendix
+
+The supplementary material is organized as follows:
+\begin{enumerate}[label={\it (\roman*)}]
+    \item We provide more discussion about \Cref{theorem:supervised-ht,theorem:supervised-nnl} in \Cref{sec:discussion-supervised};
+    \item The proofs of \Cref{theorem:supervised-ht,theorem:supervised-nnl,theorem:online-ht,theorem:online} are presented in \Cref{sec:proofs};
+    \item We present in \Cref{sec:supplementary-expes} additional information about the experiments.
+\end{enumerate}
+
+\section{Additional insights on \crtCref{sec:wasserstein-batch}}
+\label{sec:discussion-supervised}
+
+In \Cref{sec:discussion-supervised-ht}, we provide additional discussion about \Cref{theorem:supervised-ht} while \Cref{sec:discussion-supervised-nnl} discuss about the convergence rates for \Cref{theorem:supervised-nnl}.
+
+\subsection{Supplementary discussion about \crtCref{theorem:supervised-ht}}
+\label{sec:discussion-supervised-ht}
+
+ \cite[Corollary 10]{haddouche2023wasserstein} proposed PAC-Bayes bounds with Wasserstein distances on a Euclidean predictor space with Gaussian prior and posteriors. 
+ The bounds have an explicit convergence rate of $\Ocal({\sqrt{\nicefrac{d W_1(\Q,\P)}{m}}})$ where the predictor space is Euclidean with dimension $d$.
+ While our bound does not propose such an explicit convergence rate, it allows us to derive learning algorithms as described in \Cref{sec:experiments}. 
+ A broader discussion about the role of $K$ is detailed in \Cref{theorem:supervised-nnl}.
+ Furthermore, our bound holds for any Polish predictor space and does not require Gaussian distributions.
+ Furthermore, our result exploits data-dependent priors and deals with the dimension only through the Wasserstein distance, which can attenuate the impact of the dimension. 
+
+\subsection{Convergence rates for \crtCref{theorem:supervised-nnl}}
+\label{sec:discussion-supervised-nnl}
+
+In this section, we discuss more deeply the values of $K$ in \Cref{theorem:supervised-nnl}. 
+This implies a tradeoff between the number of sets $K$ and the cardinal of each $\S_i$.
+The tightness of the bound depends highly on the sets $\S_1, \dots, \S_K$.
+
+\textbf{Full batch setting K=1.} When $\S_1=\S$ with $K=1$, the bound of \Cref{theorem:supervised-nnl} becomes, with probability $1-\delta$, for any $\Q\in\Mcal(\H)$
+\begin{align*}
+ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le 2L\W(\Q, \P) + 2\sqrt{\frac{\ln\frac{1}{\delta}}{m}}\ ,
+\end{align*}
+where $\P=\P_1$ is data-free.
+This bound can be seen as the high-probability (PAC-Bayesian) version of the expected bound of \cite{wang2019information}.
+Furthermore, in this setting, we are able, through our proof technique, to recover an explicit convergence rate similar to the one of \cite[][Theorem 12]{amit2022integral}. It is stated below.
+
+\begin{corollary}
+For any distribution $\D$ on $\Z$, for any finite hypothesis space $\H$ equipped with a distance $d$, for any $L$-Lipschitz loss function $\loss: \H\times\Z\to[0,1]$, for any $\delta\in(0,1]$, we have, with probability $1-\delta$ over the sample $\S$, for any $\Q\in\Mcal(\H)$:
+\begin{align*}
+\ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le L\sqrt{\frac{2\ln\left(\nicefrac{4|\H|^2}{\delta}\right)}{m}} \W(\Q, \P) +  2\sqrt{\frac{\ln\left(\nicefrac{2}{\delta}\right)}{m}} 
+ \end{align*}
+where $\P$ is a data-free prior.
+\end{corollary}
+\begin{proof}
+    We exploit \cite[][Equation 35]{amit2022integral} to state that with probability at least $1-\nicefrac{\delta}{2}$, for any $(h,h')\in \H^2$: 
+    \[\left|\frac{1}{m} \sum_{i=1}^m\left[\loss\left(h^{\prime}, \z_i\right)-\loss\left(h, \z_i\right)\right]-\EE_{\z \sim \D}\left[\loss\left(h^{\prime}, \z\right)-\loss(h, \z)\right]\right| \leq  L \sqrt{\frac{2 \ln \left(\frac{4|\H|^2}{\delta}\right)}{m}}d\left(h, h^{\prime}\right) .\]
+So, with high probability, we can exploit the Kantorovich-Rubinstein duality with this new Lipschitz constant: with probability at least $1-\delta/2$:
+\begin{align*}
+    \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] & \le L \sqrt{\frac{2 \ln \left(\frac{4|\H|^2}{\delta}\right)}{m}}\W(\Q, \P) +\EE_{h\sim\P} \frac{1}{m}\LB  \sum_{i=1}^m \Risk_{\D}(h) -\loss(h, \z_i) \RB,
+\end{align*}
+To conclude, we control the quantity on the right-hand side the same way as in \Cref{theorem:supervised-ht} and \Cref{theorem:supervised-nnl}. We then have, with probability at least $1-\delta/2$, for a loss function in $[0,1]$:
+\[\frac{1}{m} \sum_{i=1}^m \Risk_{\D}(h) -\loss(h, \z_i) \leq 2\sqrt{\frac{\ln\frac{K}{\delta}}{m}}.\]
+Taking the union bound concludes the proof.
+\end{proof}
+
+\textbf{Mini-batch setting $K=\sqrt{m}$.} When a tradeoff is desired between the quantity of data we want to infuse in our priors and an explicit convergence rate, a meaningful candidate is when $K=\sqrt{m}$.  \Cref{theorem:supervised-nnl}'s bound becomes, in this particular case:
+\begin{align}
+\label{eq:supervised-with-tuned-K}
+ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le \frac{2L}{\sqrt{m}}\sum_{i=1}^{\sqrt{m}}\W(\Q, \P_i) + 2\sqrt{\frac{\ln\frac{\sqrt{m}}{\delta}}{\sqrt{m}}}.
+\end{align}
+
+\textbf{Towards online learning: $K=m$.} When $K=m$, the sets $\S_i$ contain only one example. 
+More precisely, we have for all $i\in\{1,\dots,m\}$ the set $\S_i=\{\z_i\}$.
+In this case, the bound becomes:
+\begin{align*}
+\ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le \frac{2L}{m}\sum_{i=1}^{m}\W(\Q, \P_i) + 2\sqrt{\ln\frac{m}{\delta}}.
+\end{align*}
+This bound is vacuous since the last term is incompressible, hence the need for a new technique detailed in \Cref{sec:wasserstein-online} to deal with it.
+
+\section{Proofs}
+\label{sec:proofs}
+
+The proof of \Cref{theorem:supervised-ht} is presented in \Cref{sec:proof-supervised-ht}. 
+\Cref{sec:proof-supervised,sec:alt-proof-supervised} introduce two proofs of \Cref{theorem:supervised-nnl}.
+\Cref{theorem:online-ht}'s proof is presented in \Cref{sec:proof-online-ht}.
+\Cref{sec:proof-online} provides the proof of \Cref{theorem:online-ht}.
+
+\subsection{Proof of \crtCref{theorem:supervised-ht}}
+\label{sec:proof-supervised-ht}
+
+\theoremsupervisedht*
+\begin{proof}
+For the sake of readability, we identify, for any $i$, $\P_i $ and $\P_{i,\S}$.
+\paragraph{Step 1: Exploit the Kantorovich duality \cite[Remark 6.5]{villani2009optimal}.}
+First of all, note that for a $L$-Lipschitz loss function $\loss: \H\times\Z\to[0,1]$, we have
+\begin{align}
+\LN\LP |\S_i|\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP |\S_i|\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN \le 2|\S_i|Ld(h_1, h_2).\label{eq:proof-supervised-ht-1}
+\end{align}
+Indeed, we can deduce \Cref{eq:proof-supervised-ht-1} from Jensen inequality, the triangle inequality, and by definition that we have
+\begin{align*}
+&\LN\LP |\S_i|\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP |\S_i|\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN\\
+&= \LN\LP\sum_{\z\in\S_i}\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP\sum_{\z\in\S_i}\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN\\
+&\le \sum_{\z\in\S_i}\EE_{\z'\sim\D}\Big[ |\loss(h_1, \z')-\loss(h_2, \z')|+|\loss(h_2, \z)-\loss(h_1, \z)|\Big]\\
+&\le \EE_{\z'\sim\D}\sum_{\z\in\S_i} 2Ld(h_1, h_2)\\
+&= 2|\S_i|Ld(h_1, h_2).
+\end{align*}
+We are now able to upper-bound $\EE_{h\sim\Q}[ \Risk_{\D}(h) - \Riskhat_{\S}(h) ]$. 
+Indeed, we have
+\begin{align}
+\EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] &= \frac{1}{m}\sum_{i=1}^{K} \EE_{h\sim\Q}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i}\loss(h, \z) \RB\nonumber\\
+&\le \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB,\label{eq:proof-supervised-ht-2}
+\end{align}
+where the inequality comes from the Kantorovich-Rubinstein duality theorem.
+
+\paragraph{Step 2: Define an adapted supermartingale.}
+    For any $1\leq i \leq K$, we fix $\lambda_i>0$ and we provide an arbitrary order to the elements of $\S_i\defeq \{\z_{i,1},\cdots,\z_{i,|S_i|}\}$. Then we define for any $h$: 
+    \begin{align*}
+    M_{|\S_i|}(h)\defeq   |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) = \sum_{j=1}^{|\S_i|} R_\D(h) - \loss(h,\z_{i,j}).
+    \end{align*}
+    Remark that, because our data are \iid, $(M_{|\S_i|})_{|\S_i|\geq 1}$ is a martingale.
+    We then exploit the technique \cite{haddouche2023pac} to define a supermartingale.
+    More precisely, we exploit a result from \cite{bercu2008exponential} cited in Lemma 1.3 of \cite{haddouche2023pac} coupled with Lemma 2.2 of \cite{haddouche2023pac} to ensure that the process
+    \begin{align*}
+    SM_{|\S_i|} \defeq \EE_{h\sim \P_i} \LB\exp\left(\lambda_i M_{|\S_i|}(h) - \frac{\lambda_i^2}{2}\left( \Vhat_{|\S_i|}(h) + V_{|\S_i|}(h) \right)\right)\RB,
+    \end{align*}
+    is a supermartingale, where $\Vhat_{|\S_i|}(h)= \sum_{j=1}^{|\S_i|} \left(\loss(h,\z_{i,j}) - R_\D(h)\right)^2$ and $V_{|\S_i|}(h) = \EE_{\S_i} \LB \Vhat_{|\S_i|}(h) \RB $.
+
+
+
+\paragraph{Step 3. Combine steps 1 and 2.}
+    
+    We restart from \Cref{eq:proof-supervised-ht-2} to exploit again the Kantorovich-Rubinstein duality.
+
+    \begin{align*}
+        \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] &=  \frac{1}{m}\sum_{i=1}^{K} \EE_{h\sim\Q}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i}\loss(h, \z) \RB\nonumber\\
+        &\le \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \frac{1}{m\lambda_i}\lambda_i\EE_{h\sim\P_i} \LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB, \\
+        & = \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \frac{1}{m\lambda_i}\EE_{h\sim\P_i} \LB \lambda_i M_{|\S_i|}| \RB, \\
+        &\le   \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \frac{1}{m\lambda_i} \ln\left( SM_{|\S_i|}  \right) \\
+        & + \frac{1}{m}\sum_{i=1}^K \EE_{h\sim\P_i}\LB\frac{\lambda_i}{2}\left( \Vhat_{|\S_i|}(h) + V_{|\S_i|}(h) \right) \RB.
+    \end{align*}
+    The last line holds thanks to Jensen's inequality.
+    We now apply Ville's inequality (see \eg, Section 1.2 of \cite{haddouche2023pac}).
+    We have for any $i$: 
+    \begin{align*}
+    \PP_{\S_i \sim \D^{|\S_i|}}\left( \forall |S_i|\geq 1, SM_{|S_i|} \leq \frac{1}{\delta}  \right) \geq 1-\delta.
+    \end{align*}
+    Applying an union bound and authorising $\lambda_i$ to be a function of $|S_i|$ (thus the inequality does not hold for all $|\S_i|$ simultaneously) finally gives with probability at least $1-\delta$, for all $\Q\in \Mcal(\H)$ :
+    \begin{multline*}
+         \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \leq    \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K}   \frac{\ln\left( \frac{K}{\delta}  \right)}{\lambda_i m} + \frac{\lambda_i}{2m}\EE_{h\sim\P_i}\LB \Vhat_{|\S_i|}(h) + V_{|\S_i|}(h) \RB.
+    \end{multline*}    
+\end{proof}
+
+\subsection{Proof of \crtCref{theorem:supervised-nnl}}
+\label{sec:proof-supervised}
+
+\theoremsupervisednnl*
+\begin{proof}
+For the sake of readability, we identify, for any $i$, $\P_i $ and $\P_{i,\S}$.
+\paragraph{Step 1: Exploit the Kantorovich duality \cite[Remark 6.5]{villani2009optimal}.}
+First of all, note that for a $L$-Lipschitz loss function $\loss: \H\times\Z\to[0,1]$, we have
+\begin{align}
+\LN\LP |\S_i|\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP |\S_i|\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN \le 2|\S_i|Ld(h_1, h_2).\label{eq:proof-supervised-1}
+\end{align}
+Indeed, we can deduce \Cref{eq:proof-supervised-1} from Jensen inequality, the triangle inequality, and by definition that we have
+\begin{align*}
+&\LN\LP |\S_i|\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP |\S_i|\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN\\
+&= \LN\LP\sum_{\z\in\S_i}\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP\sum_{\z\in\S_i}\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN\\
+&\le \sum_{\z\in\S_i}\EE_{\z'\sim\D}\Big[ |\loss(h_1, \z')-\loss(h_2, \z')|+|\loss(h_2, \z)-\loss(h_1, \z)|\Big]\\
+&\le \EE_{\z'\sim\D}\sum_{\z\in\S_i} 2Ld(h_1, h_2)\\
+&= 2|\S_i|Ld(h_1, h_2).
+\end{align*}
+We are now able to upper-bound $\EE_{h\sim\Q}[ \Risk_{\D}(h) - \Riskhat_{\S}(h) ]$. 
+Indeed, we have
+\begin{align}
+\EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] &= \frac{1}{m}\sum_{i=1}^{K} \EE_{h\sim\Q}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i}\loss(h, \z) \RB\nonumber\\
+&\le \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB,\label{eq:proof-supervised-2}
+\end{align}
+where the inequality comes from the Kantorovich-Rubinstein duality theorem.
+
+\paragraph{Step 2: Define an adapted supermartingale. }
+    For any $1\leq i \leq K$, we fix $\lambda_i>0$ and we provide an arbitrary order to the elements of $\S_i\defeq \{\z_{i,1},\cdots,\z_{i,|S_i|}\}$. Then we define for any $h$: 
+    \begin{align*}
+    M_{|\S_i|}(h)\defeq   |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) = \sum_{j=1}^{|\S_i|} R_\D(h) - \loss(h,\z_{i,j}).
+    \end{align*}
+    Remark that, because our data are \iid, $(M_{|\S_i|})_{|\S_i|\geq 1}$ is a martingale. 
+    We then exploit the technique \cite{chugg2023unified} to define a supermartingale. 
+    More precisely, we exploit \cite[][Lemma A.2 and Lemma B.1]{chugg2023unified} to ensure that the process
+    \begin{align*}
+    SM_{|\S_i|} \defeq \EE_{h\sim \P_i} \LB\exp\left(\lambda_i M_{|\S_i|}(h) - \frac{\lambda_i^2}{2} L_{|\S_i|}(h) \right)\RB,
+    \end{align*}
+    is a supermartingale, where, because our data are \iid,  $L_{|\S_i|}(h) = \EE_{\S} \LB \sum_{j=1}^{|S_i|}\loss(h,\z_{i,j})^2 \RB = |\S_i| \EE_{z\sim \D}[\loss(h,z)^2]$. 
+
+\paragraph{Step 3. Combine steps 1 and 2.}
+    We restart from \Cref{eq:proof-supervised-2} to exploit the Kantorovich-Rubinstein duality again.
+    \begin{align*}
+        \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] &=  \frac{1}{m}\sum_{i=1}^{K} \EE_{h\sim\Q}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i}\loss(h, \z) \RB\nonumber\\
+        &\le \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \frac{1}{m\lambda_i}\lambda_i\EE_{h\sim\P_i} \LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB, \\
+        & = \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \frac{1}{m\lambda_i}\EE_{h\sim\P_i} \LB \lambda_i M_{|\S_i|}| \RB, \\
+        &\le   \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \frac{1}{m\lambda_i} \ln\left( SM_{|\S_i|}  \right) \\
+        & + \frac{1}{m}\sum_{i=1}^K \EE_{h\sim\P_i}\LB\frac{\lambda_i}{2} L_{|\S_i|}(h) \RB.
+    \end{align*}
+    The last line holds thanks to Jensen's inequality.
+    We now apply Ville's inequality (see \eg, section 1.2 of \cite{haddouche2023pac}). We have for any $i$: 
+    \begin{align*}
+    \PP_{\S_i \sim \D^{|\S_i|}}\left( \forall |S_i|\geq 1, SM_{|S_i|} \leq \frac{1}{\delta}  \right) \geq 1-\delta.
+    \end{align*}
+    Applying an union bound and authorising $\lambda_i$ to be a function of $|S_i|$ (thus the inequality does not hold for all $|\S_i|$ simultaneously) finally gives with probability at least $1-\delta$, for all $\Q\in \Mcal(\H)$ :
+    \begin{align*}
+         \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \leq    \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K}   \frac{\ln\left( \frac{K}{\delta}  \right)}{\lambda_i m} + \frac{\lambda_i}{2m}\EE_{h\sim\P_i}\LB L{|\S_i|}(h) \RB.
+    \end{align*}
+    Finally, using the assumption $\EE_{h\sim \P_i}\EE_{z\sim \D}[\loss(h,z)^2] \leq 1$ gives, with probability at least $1-\delta$, for all $\Q\in \Mcal(\H)$:
+    \begin{align*}
+         \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \leq    \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K}   \frac{\ln\left( \frac{K}{\delta}  \right)}{\lambda_i m} + \frac{\lambda_i[\S_i|]}{2m}.
+    \end{align*}
+    Taking for each $i$, $\lambda_i= \sqrt{\frac{2\ln(K/\delta)}{|\S_i|}}$ concludes the proof.
+\end{proof}
+    
+
+\subsection{Alternative proof of \crtCref{theorem:supervised-nnl}}
+\label{sec:alt-proof-supervised}
+
+
+We state here a slightly tighter version of \Cref{theorem:supervised-nnl} for bounded losses, which relies on an application of McDiarmid's inequality instead of supermartingale techniques.
+This is useful for the numerical evaluations of our bound.
+
+\begin{theorem}\label{theorem:supervised_tight}
+We assume our loss $\loss$ to be in $[0,1]$ and $L$-Lipschitz.
+Then, for any $\delta\in(0,1]$, with probability at least $1-\delta$ over the sample $\S$, the following holds for the distributions $\P_{i,\S}\defeq \P_i(\S,.)$ and for any $\Q\in\Mcal(\H)$:
+\begin{align*}
+\ \EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le \sum_{i=1}^{K} \frac{2|\S_i|L}{m} \W(\Q, \P_{i,\S}) + \sum_{i=1}^{K} \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}} 
+\end{align*}
+where $\P_i$ {\it does not} depend on $\S_i$.
+\end{theorem}
+\begin{proof}
+For the sake of readability, we identify, for any $i$, $\P_i $ and $\P_{i,\S}$.
+
+First of all, note that for a $L$-Lipschitz loss function $\loss: \H\times\Z\to[0,1]$, we have
+\begin{align}
+\LN\LP |\S_i|\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP |\S_i|\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN \le 2|\S_i|Ld(h_1, h_2).\label{eq:alt-proof-supervised-1}
+\end{align}
+Indeed, we can deduce \Cref{eq:alt-proof-supervised-1} from Jensen's inequality, the triangle inequality, and by definition that we have
+\begin{align*}
+&\LN\LP |\S_i|\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP |\S_i|\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN\\
+&= \LN\LP\sum_{\z\in\S_i}\Risk_{\D}(h_1){-}\sum_{\z\in\S_i}\loss(h_1, \z)\RP - \LP\sum_{\z\in\S_i}\Risk_{\D}(h_2){-}\sum_{\z\in\S_i}\loss(h_2, \z)\RP\RN\\
+&\le \sum_{\z\in\S_i}\EE_{\z'\sim\D}\Big[ |\loss(h_1, \z')-\loss(h_2, \z')|+|\loss(h_2, \z)-\loss(h_1, \z)|\Big]\\
+&\le \EE_{\z'\sim\D}\sum_{\z\in\S_i} 2Ld(h_1, h_2)\\
+&= 2|\S_i|Ld(h_1, h_2).
+\end{align*}
+We are now able to upper-bound $\EE_{h\sim\Q}[ \Risk_{\D}(h) - \Riskhat_{\S}(h) ]$. 
+Indeed, we have
+\begin{align}
+\EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] &= \frac{1}{m}\sum_{i=1}^{K} \EE_{h\sim\Q}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i}\loss(h, \z) \RB\nonumber\\
+&\le \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB,\label{eq:alt-proof-supervised-2}
+\end{align}
+where the inequality comes from the Kantorovich-Rubinstein duality theorem.
+Let $f(\S_i)=\EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z_i)\RB$, the function has the bounded difference inequality, \ie, for two datasets $\S_i$ and $\S'_i$ that differs from one example (the $k$-th example, without loss of generality), we have
+\begin{align*}
+\LN f(\S_i) - f(\S'_i) \RN &= \LN \EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z)\RB - \EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z'\in\S'_i} \loss(h, \z')\RB \RN\\
+&= \LN \EE_{h\sim\P_i} \LB \frac{1}{m}|\S_i|\Risk_{\D}(h) - \frac{1}{m}\sum_{\z\in\S_i} \loss(h, \z) - \frac{1}{m}|\S_i|\Risk_{\D}(h) + \frac{1}{m}\sum_{\z'\in\S'_i} \loss(h, \z')\RB \RN\\
+&= \LN \EE_{h\sim\P_i} \LB \frac{1}{m}\sum_{\z'\in\S'_i} \loss(h, \z') - \frac{1}{m}\sum_{\z\in\S_i} \loss(h, \z)\RB \RN\\
+&= \LN \EE_{h\sim\P_i} \LB \frac{1}{m}\loss(h, \z'_k) - \frac{1}{m}\loss(h, \z_k)\RB \RN\\
+&\le \frac{1}{m}.
+\end{align*}
+
+Hence, from Mcdiarmid's inequality, we have with probability at least $1-\frac{\delta}{K}$ over $\S\sim\D^{m}$
+\begin{align*}
+&\EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB \\ &\le \EE_{\S\sim\D^{m}}\EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB + \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}\\
+&= \EE_{\S^c_i\sim\D^{m-|\S_i|}}\EE_{\S_i\sim\D^{|\S_i|}}\EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \sum_{\z\in\S_i} \loss(h, \z) \RB + \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}\\
+&= \EE_{\S^c_i\sim\D^{m-|\S_i|}}\EE_{h\sim\P_i} \frac{1}{m}\LB |\S_i|\Risk_{\D}(h) - \EE_{\S_i\sim\D^{|\S_i|}}\sum_{\z\in\S_i} \loss(h, \z) \RB + \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}\\
+&= \EE_{\S^c_i\sim\D^{m-|\S_i|}}\EE_{h\sim\P_i} \frac{1}{m}\Big[ |\S_i|\Risk_{\D}(h) - |\S_i|\Risk_{\D}(h)\Big] + \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}\\
+&= \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}.
+\end{align*}
+
+From the union bound, we have with probability at least $1-\delta$ over $\S\sim\D^m$, for any $\Q\in\Mcal(\H)$,
+\begin{align*}
+\EE_{h\sim\Q}\Big[ \Risk_{\D}(h) - \Riskhat_{\S}(h) \Big] \le \sum_{i=1}^{K} \frac{2|\S_i|L}{m}\W(\Q, \P_i) + \sum_{i=1}^{K} \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}},
+\end{align*}
+which is the claimed result.
+\end{proof}
+
+We are now able to give a corollary of \Cref{theorem:supervised_tight}.
+
+\begin{corollary}\label{corollary:supervised-nnl} We assume our loss $\loss$ to be in $[0,1]$ and $L$-Lipschitz. 
+Then, for any $\delta\in(0,1]$, with probability at least $1-\delta$ over the sample $\S$, the following holds for the hypotheses $h_{i,\S}\in\H$ associated with the Dirac distributions $\P_{i,\S}$ and for any $h\in\H$: 
+\begin{align*}
+\Risk_{\D}(h) \le \Riskhat_{\S}(h) + \sum_{i=1}^{K} \frac{2|\S_i|L}{m} d(h, h_{i,\S}) + \sum_{i=1}^{K} \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}.
+\end{align*}
+\end{corollary}
+
+Such a bound was impossible to obtain from the PAC-Bayesian bounds based on a KL divergence.
+Indeed, the KL divergence is infinite for two distributions with disjoint supports. 
+Hence, the PAC-Bayesian framework based on the Wasserstein distance allows us to provide uniform-convergence bounds from a proof technique different from the ones based on the Rademacher complexity~\cite{koltchinskii2000rademacher,bartlett2001rademacher,bartlett2002rademacher} or the VC-dimension~\cite{vapnik1968uniform,vapnik1974theory}.
+In \Cref{sec:experiments}, we provide an algorithm minimising such a bound.
+
+\subsection{Proof of \crtCref{theorem:online-ht}}
+\label{sec:proof-online-ht}
+
+\theoremonlineht*
+\begin{proof}
+First of all, note that for a $L$-Lipschitz loss function $\loss: \H\times\Z\to\R$, we have
+\begin{align}
+\LN\LP \EE_{i-1}[\loss(h_i,\z_i)]{-}\loss(h_i, \z_i)\RP - \LP \EE_{i-1}[\loss(h'_i,\z_i)]{-}\loss(h'_i, \z_i)\RP\RN \le 2Ld(h_i, h'_i).\label{eq:proof-online-ht-1}
+\end{align}
+Indeed, we can deduce \Cref{eq:proof-online-ht-1} from Jensen inequality, the triangle inequality, and by definition that we have
+\begin{multline*}
+\LN\LP\EE_{i-1}[\loss(h_i,\z_i)]{-}\loss(h_i, \z_i)\RP - \LP\EE_{i-1}[\loss(h'_i,\z_i)]{-}\loss(h'_i, \z_i)\RP\RN \\ 
+\le \EE_{i-1}\Big[ |\loss(h_i, \z'_i)-\loss(h'_i, \z'_i)|+|\loss(h_i, \z_i)-\loss(h'_i, \z_i)|\Big]\\
+ \le \EE_{i-1} 2Ld(h_i, h'_i) = 2Ld(h_i, h'_i).
+\end{multline*}
+From the Kantorovich-Rubinstein duality theorem \cite[Remark 6.5]{villani2009optimal}, we have
+\begin{align*}
+\sum_{i=1}^{m}\EE_{h_i\sim\Q_{i}}\LB\EE_{i-1}[\loss(h_i,\z_i)]-\loss(h_i, \z_i) \RB \le 2L\sum_{i=1}^{m}W_1(\Q_{i}, \P_{i,\S}) + \sum_{i=1}^{m}\EE_{h\sim\P_{i,\S}}\LB\Risk_{\D}(h_i)-\loss(h_i, \z_i) \RB.
+\end{align*}
+
+Now, we define $X_i(h_i,\z_i)\defeq \EE_{i-1}[\loss(h_i,\z_i)]- \loss(h_i, \z_i)$. We also recall that for any $i$, we have $\Vhat_i(h_i,\z_i)= (\loss(h_i,\z_i)-\EE_{i-1}[\loss(h_i,\z_i)])^2$ and $V_i(h_i)= \EE_{i-1}[\Vhat(h_i,\z_i)]$.
+To apply the supermartingales techniques of \cite{haddouche2023pac}, we define the following function:
+\begin{align*}
+   f_m(S,h_1,...,h_m) & \defeq \sum_{i=1}^m \lambda X_i(h_i,\z_i)  - \frac{\lambda^2}{2}\sum_{i=1}^m(\Vhat_i(h_i,\z_i) + V_i(h_i)).
+   \end{align*}
+    Now, Lemma 3.2 of \cite{haddouche2023pac} state that the sequence $(SM_m)_{m\geq 1}$ defined for any $m$ as:
+    \begin{align*}
+     SM_m \defeq \EE_{(h_1,\cdots,h_m) \sim \P_{1,\S} \otimes \cdots \otimes \P_{m,\S}} \LB \exp \Big( f_m(\S,h_1,...,h_m) \Big)  \RB,
+     \end{align*}
+    is a supermartingale. 
+    We exploit this fact as follows: 
+    \begin{align*}
+        \sum_{i=1}^{m}\EE_{h\sim\Q_{i-1}}\LB\EE_{i-1}[\loss(h_i,\z_i)]-\loss(h_i, \z_i)\RB &= \EE_{(h_1,\cdots,h_m) \sim \P_{1,\S} \otimes \cdots \otimes \P_{m,\S}} \LB\sum_{i=1}^m X_i(h_i,\z_i)\RB \\
+        & = \frac{1}{\lambda}\EE_{(h_1,\cdots,h_m) \sim \P_{1,\S} \otimes \cdots \otimes \P_{m,\S}} \LB f_m (\S,h_1,\cdots,h_m)\RB \\
+        & + \frac{\lambda}{2} \sum_{i=1}^m \EE_{h_i\sim \P_{i,\S}}\left[ \Vhat_i(h_i,\z_i) + V_i(h_i) \right] \\
+        & \leq \frac{\ln\left( SM_m \right)}{\lambda} + \frac{\lambda}{2} \sum_{i=1}^m \EE_{h_i\sim \P_{i,\S}}\left[ \Vhat_i(h_i,\z_i) + V_i(h_i) \right]
+    \end{align*}
+    The last line holds thanks to Jensen's inequality.
+    Now using Ville's inequality ensures us that:
+    \begin{align*}
+    \PP_{\S}\left( \forall m, SM_m \leq \frac{1}{\delta} \right) \geq \frac{1}{\delta}.
+    \end{align*}
+    Thus, with probability $1-\delta$, for any $m$ we have $\ln\left( SM_m \right) \leq \ln\left( \frac{1}{\delta} \right)$.
+    This concludes the proof.
+\end{proof}
+
+\subsection{Proof of \crtCref{theorem:online}}
+\label{sec:proof-online}
+\theoremonline*
+\begin{proof}
+The proof starts similarly to the one of \Cref{theorem:online-ht}.
+Indeed, note that for a $L$-Lipschitz loss function $\loss: \H\times\Z\to\R$, we have
+\begin{align}
+\LN\LP \EE_{i-1}[\loss(h_i,\z_i)]{-}\loss(h_i, \z_i)\RP - \LP \EE_{i-1}[\loss(h'_i,\z_i)]{-}\loss(h'_i, \z_i)\RP\RN \le 2Ld(h_i, h'_i).\label{eq:proof-online-1}
+\end{align}
+Indeed, we can deduce \Cref{eq:proof-online-1} from Jensen inequality, the triangle inequality, and by definition that we have
+\begin{multline*}
+\LN\LP\EE_{i-1}[\loss(h_i,\z_i)]{-}\loss(h_i, \z_i)\RP - \LP\EE_{i-1}[\loss(h'_i,\z_i)]{-}\loss(h'_i, \z_i)\RP\RN \\ 
+\le \EE_{i-1}\Big[ |\loss(h_i, \z'_i)-\loss(h'_i, \z'_i)|+|\loss(h_i, \z_i)-\loss(h'_i, \z_i)|\Big]\\
+ \le \EE_{i-1} 2Ld(h_i, h'_i) = 2Ld(h_i, h'_i).
+\end{multline*}
+From the Kantorovich-Rubinstein duality theorem \cite[Remark 6.5]{villani2009optimal}, we have
+\begin{align*}
+\sum_{i=1}^{m}\EE_{h_i\sim\Q_{i}}\LB\EE_{i-1}[\loss(h_i,\z_i)]-\loss(h_i, \z_i) \RB \le 2L\sum_{i=1}^{m}W_1(\Q_{i}, \P_{i,\S}) + \sum_{i=1}^{m}\EE_{h\sim\P_{i,\S}}\LB\Risk_{\D}(h_i)-\loss(h_i, \z_i) \RB.
+\end{align*}
+Now, we define $X_i(h_i,\z_i)\defeq \EE_{i-1}[\loss(h_i,\z_i)]- \loss(h_i, \z_i)$. 
+To apply the supermartingales techniques of \cite{chugg2023unified}, we define the following function:
+\begin{align*}
+   f_m(S,h_1,...,h_m) & \defeq \sum_{i=1}^m \lambda X_i(h_i,\z_i)  - \frac{\lambda^2}{2}\sum_{i=1}^m \EE_{i-1}[\loss(h_i, \z_i)^2].
+   \end{align*}
+    Now, because our loss is nonnegative, \cite[][Lemma A.2 and Lemma B.1]{chugg2023unified} state that the sequence $(SM_m)_{m\geq 1}$ defined for any $m$ as:
+    \begin{align*}
+    SM_m \defeq \EE_{(h_1,\cdots,h_m) \sim \P_{1,\S} \otimes \cdots \otimes \P_{m,\S}} \LB \exp \Big( f_m(\S,h_1,...,h_m) \Big)  \RB,
+    \end{align*}
+    is a supermartingale. 
+    We exploit this fact as follows:
+    \begin{align*}
+        \sum_{i=1}^{m}\EE_{h\sim\Q_{i-1}}\LB\EE_{i-1}[\loss(h_i,\z_i)]-\loss(h_i, \z_i)\RB &= \EE_{(h_1,\cdots,h_m) \sim \P_{1,\S} \otimes \cdots \otimes \P_{m,\S}} \LB\sum_{i=1}^m X_i(h_i,\z_i)\RB \\
+        & = \frac{1}{\lambda}\EE_{(h_1,\cdots,h_m) \sim \P_{1,\S} \otimes \cdots \otimes \P_{m,\S}} \LB f_m (\S,h_1,\cdots,h_m)\RB \\
+        & + \frac{\lambda}{2} \sum_{i=1}^m \EE_{h_i\sim \P_{i,\S}}\left[ \EE_{i-1}[\loss(h_i, \z_i)^2] \right] \\
+        & \leq \frac{\ln\left( SM_m \right)}{\lambda} + \frac{\lambda}{2} \sum_{i=1}^m \EE_{h_i\sim \P_{i,\S}}\left[ \EE_{i-1}[\loss(h_i, \z_i)^2] \right]
+    \end{align*}
+    The last line holds thanks to Jensen's inequality.
+    Now using Ville's inequality ensures us that:
+    \begin{align*}
+    \PP_{\S}\left( \forall m, SM_m \leq \frac{1}{\delta} \right) \geq \frac{1}{\delta}
+    \end{align*}
+    Thus, with probability $1{-}\delta$, for any $m$ we have $\ln(SM_m){\leq}\ln\frac{1}{\delta}$. 
+    We conclude the proof by exploiting the boundedness assumption on conditional order 2 moments and optimising the bound in $\lambda$. 
+\end{proof}
+
+\section{Supplementary insights on experiments}
+\label{sec:supplementary-expes}
+
+In this section, \Cref{sec:alg-batch} presents the learning algorithm for the \iid setting.
+We also introduce the online algorithm in \Cref{sec:alg-online}.
+We prove the Lipschitz constant of the loss for the linear models in \Cref{sec:lip-linear}.
+Finally, we provide more experiments in \Cref{sec:experiments-supp}.
+
+\subsection{Batch algorithm for the \iid setting}
+\label{sec:alg-batch}
+
+The pseudocode of our batch algorithm is presented in \Cref{alg:batch}.
+
+\begin{algorithm}[H]
+\caption{(Mini-)Batch Learning Algorithm with Wasserstein distances}\label{alg:batch}
+\begin{algorithmic}[1]
+
+\Procedure{Priors Learning}{}
+\State{$h_1,\dots, h_K \leftarrow$ initialize the hypotheses}
+\For{$t\leftarrow 1,\dots, T$}
+\For{\textbf{each} mini-batch $\Ucal\subseteq \S$}
+\For{$i \leftarrow 1,\dots, K$}
+\State{$\Ucal_i \leftarrow \Ucal\setminus \S_i$}
+\State{$h_i\leftarrow$ perform a gradient descent step with $\nabla\Risk_{\Ucal_i}(h_i)$}
+\EndFor
+\EndFor
+\EndFor
+\State{\textbf{return} hypotheses $h_1,\dots, h_K$}
+\EndProcedure
+\State{}
+
+\Procedure{Posterior Learning}{}
+\State{$h \leftarrow$ initialize the hypothesis}
+\For{$t\leftarrow 1,\dots, T'$}
+\For{\textbf{each} mini-batch $\Ucal\subseteq \S$}
+\State{$h \leftarrow$ perform a gradient descent step with $\nabla[ \Risk_{\Ucal}(h) + \varepsilon\sum_{i=1}^{K}\frac{|\S_i|}{m}d(h, h_i) ]$}
+\EndFor
+\EndFor
+\State{\textbf{return} hypothesis $h$}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\textsc{Priors Learning} minimises the empirical risk through mini-batches $\Ucal\subseteq\S$ for $T$ epochs. More precisely, for each epoch, we {\it (a)} sample a mini-batch $\Ucal$ (line 4) by excluding the set $\S_i$ from $\Ucal$ for each $h_i\in\H$ (line 5-6), then {\it (b)} the hypotheses $h_1,\dots,h_K\in\H$ are updated (line 7).
+In \textsc{Posterior Learning}, we perform a gradient descent step (line 14) on the objective function associated with \Cref{eq:batch-alg-exp} for $T'$ epochs in a mini-batch fashion.
+
+\subsection{Learning algorithm for the online setting}
+\label{sec:alg-online}
+
+\Cref{alg:online} presents the pseudocode of our online algorithm.
+
+\begin{algorithm}[H]
+\caption{Online Learning Algorithm with Wasserstein distances}\label{alg:online}
+\begin{algorithmic}[1]
+\State{Initialize the hypothesis $h_0\in\H$}
+\For{$i\leftarrow 1,\dots, m$}
+\For{$t\leftarrow 1,\dots, T$}
+\State{$h_i \leftarrow $ perform a gradient step with $\nabla[ \loss(h_i, \z_i) + \Bhat(d(h_i, h_{i-1}){-}1) ]$~(\cref{eq:online-alg-exp-2} with $\Bhat$)}
+\EndFor
+\EndFor
+\State{{\bf return} hypotheses $h_1,\dots, h_m$}
+\end{algorithmic}
+\end{algorithm}
+
+For each time step $i$, we perform $T$ gradient descent steps on the objective associated with \Cref{eq:online-alg-exp} (line 4).
+Note that we can retrieve OGD from \Cref{alg:online} by {\it (a)} setting $T=1$ and {\it (b)} removing the regularisation term $\Bhat(d(h_i, h_{i-1}){-}1)$.
+
+\subsection{Lipschitzness for the linear model}
+\label{sec:lip-linear}
+
+Recall that we use, in our experiments, the multi-margin loss function from the Pytorch module defined for any linear model with weights $W\in\R^{|\Y|\times d}$ and biases $b\in\R^{|\Y|}$, any data point $\z\in \X\times\Y$
+
+\[\loss(W,b,\z)= \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} \max\left(0, f(W,b,\z,y') \right), \]
+
+where $f(W,b,\z,y')= 1+ \langle W[y']-W[y],\x \rangle+b[y']-b[y]$, and $W[y]\in \R^{d}$ and $b[y]\in\R$ are respectively the vector and the scalar for the $y$-th output.
+
+To apply our theorems, we must ensure that our loss function is Lipschitz with respect to the linear model, hence the following lemma.
+
+\begin{lemma}\label{lemma:lipschitz-linear}
+    For any $\z=(\x,y)\in\X\times\Y$ with the norm of $\x$ bounded by $1$, the function $W,b\mapsto \loss(W,b,\z)$ is $2$-Lipschitz.
+\end{lemma}
+
+\begin{proof}
+    Let $(W,b),(W',b')$ both in $ \R^{|\Y|\times d}\times \R^{|\Y|}$, we have
+    \begin{align*}
+        |\loss(W,b,\z)- \loss(W',b',\z)| & \leq \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} |\max\left(0, f(W,b,\z,y') \right) - \max\left(0, f(W',b',\z,y') \right)|.
+    \end{align*}
+    Note that because $\alpha\mapsto\max(0,\alpha)$ is $1$-Lipschitz, we have: 
+    \begin{align*}
+        |\loss(W,b,\z)- \loss(W',b',\z)| & \leq \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} | f(W,b,\z,y') - f(W',b',\z,y')|.
+    \end{align*}
+    Finally, notice that: 
+    \begin{align*}
+        \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} | f(W,b,\z,y')  -f(W',b',\z,y')| &\le \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} \left|\left\langle (W-W')[y'] - (W-W')[y],\x\right\rangle   \right| \\
+        & + \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} |(b-b')[y'] - (b-b')[y]|\\
+        & \leq \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} \left\| (W-W')[y'] - (W-W')[y]  \right\|\|\x\| \\
+        & + \frac{1}{|\Y|-1}\sum_{y^\prime \neq y} |(b-b')[y'] - (b-b')[y]|.
+    \end{align*}
+
+
+   Because we consider the Euclidean norm, we have for any $y'\in\Y$:
+
+    \begin{align*}
+        \left\| (W-W')[y'] - (W-W')[y]  \right\| & = \sqrt{\| (W-W')[y'] - (W-W')[y]\|^2} \\
+        & \leq \sqrt{2 \left(\|(W-W')[y']\|^2 + \|(W-W')[y]\|^2 \right)} \\
+        & \leq \sqrt{2}\|W-W'\|.
+    \end{align*}
+
+    The second line holding because for any scalars $a,b$, we have $(a-b)^2 \leq 2(a^2 + b^2)$ and the last line holding because $\|W-W'\|^2= \sum_{y\in\Y} \|(W-W')[y]\|^2$.
+    A similar argument gives
+
+    \[\frac{1}{|\Y|-1}\sum_{y^\prime \neq y} |(b-b')[y'] - (b-b')[y]| \leq \sqrt{2}||b-b'||.\]
+
+    Then, using that $\|x\| \leq 1$ and summing on all $y'$ gives: 
+
+    \[|\loss(W,b,\z)- \loss(W',b',\z)| \leq \sqrt{2}\left(\|W-W'\| + \|b-b'\|\right). \]
+
+    Finally, notice that $(\|W-W'\| + \|b-b'\|)^2 \leq 2(\|W-W'\|^2 + \|b-b'\|^2) = 2\|(W,b)-(W',b')\|^2$. 
+
+    Thus $\|W-W'\| + \|b-b'\| \leq \sqrt{2}\|(W,b)-(W',b')\|$. 
+    This concludes the proof.
+\end{proof}
+
+\subsection{Lipschitzness for neural networks}
+\label{sec:lip-nn}
+
+Recall that we use, in our experiments, the multi-margin loss function from the Pytorch module defined we consider the loss $\loss(h, (\x, y)) = \frac{1}{|\Y|}\sum_{y'\ne y} \max(0, 1{-} \eta(h[y]{-}h[y']))$, which is $\eta$-Lipschitz \wrt the outputs $h[1],\dots, h[|\Y|]$.
+For neural networks, $h$ is the output of the neural network with input $\x$. Note that this loss is $\eta$-lipschitz with respect to the outputs.
+To apply our theorems, we must ensure that our loss function is Lipschitz with respect to the weights of the neural networks, hence the following lemma with associated background.
+
+We define a FCN recursively as follows: for a vector $\Wbf_1= \vect(\{W_1,b\})$, (\ie, the vectorisation of a weight matrix $W_1$ and a bias $b$) and an input datum $\x$, $\text{FCN}_1(\Wbf_1, \x)= \sigma_1\left(W_1\x +b_1  \right)$, where $\sigma_1$ is the activation function.
+Also, for any $i\geq 2$ we define for a vector $\Wbf_i= (W_{i},b_i,\Wbf_{i-1})$ (defined recursively as well), $\text{FCN}_i(\Wbf_{i},\x)= \sigma_i\left(W_i\text{FCN}_{i-1}(\Wbf_{i-1},\x) +b_i  \right)$.
+Then, setting $\z=(\x,y)$ a datum and  $h_i(\x) \defeq \text{FCN}_i(\Wbf_{i},\x)$ we can rewrite our loss as a function of $(\Wbf_{i},\z)$. 
+
+\begin{lemma}
+    \label{l:lip-nn}
+    Assume that all the weight matrices of $\Wbf_i$ are bounded and that the activation functions are Lipschitz continuous with constant bounded by $K_\sigma$.
+    Then for any datum $\z= (\x,y)$, any $i$, $\Wbf_i\rightarrow\loss(\Wbf_i,\z)$ is Lipschitz continuous.
+\end{lemma}
+\begin{proof}
+    We consider the Frobenius norm on matrices as $\Wbf_2$ is a vector as we consider the L2-norm on the vector.
+    We prove the result for $i=2$, assuming it is true for $i=1$. We then explain how this proof generalises the case $i=1$ and works recursively.
+    Let $\z,\Wbf_2,\Wbf_2'$, for clarity we write $\text{FCN}_2(\x)\defeq \text{FCN}(\Wbf_2,\x)$ and $\text{FCN}_2'(\x)\defeq \text{FCN}(\Wbf_2',\x)$. 
+    As $\loss$ is Lipschitz on the outputs $\text{FCN}_2(\x), \text{FCN}_2'(\x)$. 
+    We have
+    
+    \begin{multline*}
+        |\loss(\Wbf_2, \z) - \loss(\Wbf'_2, \z) |  \le \eta \left\|\text{FCN}_2(\x)-\text{FCN}_2'(\x) \right\| \\
+        \le \eta \left\|\sigma_2\left(W_2\text{FCN}_{1}(\x) +b_2 \right) - \sigma_2\left(W_2'\text{FCN}_{1}'(\x) +b_2' \right) \right\| \\
+         \le \eta K_{\sigma}\| W_2\text{FCN}_{1}(\x) +b_2 - W_2'\text{FCN}_{1}'(\x) -b_2'\| \\
+         \le \eta K_\sigma\left( ||(W_2- W_2') \text{FCN}_{1}(\x) || + ||W_2'(\text{FCN}_{1}(\x)-\text{FCN}_{1}'(\x))\| + \|b_2-b_2'\|  \right).
+    \end{multline*}
+    
+    Then, we have $||(W_2- W_2') \text{FCN}_{1}(\x) || \le ||(W_2- W_2')||_F ||\text{FCN}_1(\x)|| \le  K_\x ||(W_2- W_2')||_F$. The second inequality holding as $\text{FCN}_1(\x)$ is a continuous function of the weights. Indeed, as on a compact space, a continuous function reaches its maximum, then its norm is bounded by a certain $K_\x$. 
+    Also, as the weights are bounded, any weight matrix has its norm bounded by a certain $K_{W}$ thus $\|W_2'(\text{FCN}_{1}(\x)-\text{FCN}_{1}'(\x)\| \le \|W_2'\|_F\|(\text{FCN}_{1}(\x)-\text{FCN}_{1}'(\x)\| \le K_{W}\|\text{FCN}_{1}(\x)-\text{FCN}_{1}'(\x)\|$. Finally, taking $K_{\text{temp}}= \eta K_{\sigma}\max(K_{\x},K_W,1)$ gives: 
+    \begin{align*}
+        |\loss(\Wbf_2, \z) - \loss(\Wbf'_2, \z) |
+        &\le K_{\text{temp}} \left(\|(W_2- W_2')\|_F + \|b_2-b_2'\| + \|\text{FCN}_{1}(\x)-\text{FCN}_{1}'(\x)\|\right).
+    \end{align*}  
+
+    Exploiting the recursive assumption that $\text{FCN}_1$ is Lipschitz with respect to its weights $\Wbf_1$ gives  $\|\text{FCN}_{1}(\x)-\text{FCN}_{1}'(\x)\| \le K_1 ||\Wbf_1- \Wbf_1'|| $.
+
+    If we denote by $(W_2,b_2)$ the vector of all concatenated weights, notice that $\|(W_2- W_2')\|_F + \|b_2-b_2'\| = \sqrt{(\|(W_2- W_2')\|_F + \|b_2-b_2'\|)^2} \le \sqrt{2(\|(W_2- W_2')\|_F^2 + \|b_2-b_2'\|^2)} = \sqrt{2}\|(W_2,b_2)-(W_2',b_2')\|$ (we used that for any real numbers $a,b, (a+b)^2\le 2(a^2 + b^2)$). We then have: 
+    \begin{align*}
+         |\loss(\Wbf_2, \z) - \loss(\Wbf'_2, \z) | & \le K_{\text{temp}} \max(\sqrt{2},K_1) \left( \|(W_2,b_2)-(W_2',b_2')\| + ||\Wbf_1- \Wbf_1'|| \right) \\
+         & \le \sqrt{2} K_{\text{temp}} \max(\sqrt{2},K_1) ||\Wbf_2- \Wbf_2'||.
+     \end{align*} 
+    The last line holds by reusing the same calculation trick. This concludes the proof for $i=2$. Then for $i=1$ the same proof holds by replacing $W_2, b_2, \text{FCN}_2$ by $W_1, b_1, \text{FCN}_1$ and replacing $\text{FCN}_1(\x),  \text{FCN}_1'(\x)$ by $\x$ (we then do not need to assume a recursive Lipschitz behaviour). Therefore the result holds for $i=1$. 
+
+    We then properly apply a recursive argument by assuming the result at rank $i-1$ reusing the same proof at any rank $i$ by replacing $W_2, b_2, \text{FCN}_2$ by $W_i, b_i, \text{FCN}_i$ and $\text{FCN}_1(\x), \text{FCN}_1'(\x)$ by $\text{FCN}_{i-1}(\x), \text{FCN}_{i-1}'(\x)$. This concludes the proof.
+\end{proof}
+
+\subsection{Experiments with varying number of priors}
+\label{sec:experiments-supp}
+
+The experiments of \Cref{sec:experiments} rely on data-dependent priors constructed through the procedure \textsc{Priors Learning}.
+We fixed a number of priors $K$ equal to $0.2\sqrt{m}$.
+This number is an empirical tradeoff between the informativeness of our priors and time-efficient computation.
+However, there is no theoretical intuition for the value of this parameter (the discussion of \Cref{sec:wasserstein-batch} considered $K=\sqrt{m}$ as a potential tradeoff; see \Cref{sec:discussion-supervised}). 
+Thus, we gather below the performance of our learning procedures for $K=\alpha\sqrt{m}$, where $\alpha\in\{0,0.4,0.6,0.8,1\}$ (the case $\alpha =0$ being a convention to denote $K=1$).
+The experiments are gathered below, and all remaining hyperparameters (except $K$) are identical to those described in \Cref{sec:experiments}.
+
+
+\textbf{Analysis of our results.}
+First, when considering neural networks, note that for any dataset except \textsc{segmentation}, \textsc{letter}, the performances of our methods are similar or better when considering data-dependent priors (\ie, when $\alpha >0$).
+A similar remark holds for the linear models for all datasets except for \textsc{satimage}, \textsc{segmentation}, and \textsc{tictactoe}. This illustrates the relevance of data-dependent priors.
+We also remark that there is no value of $\alpha$, which provides a better performance on all datasets.
+For instance, considering neural networks, note that $\alpha=1$ gives the better performance (\ie, the smallest $\mathfrak{R}_\D(h)$) for \Cref{alg:batch}~($\nicefrac{1}{\sqrt{m}}$) for the \textsc{satimage} dataset while, for the same algorithm, the better performance on the \textsc{segmentation} dataset is attained for $\alpha=0.8$. 
+Sometimes, the number $K$ does not have a clear influence: on \textsc{mnist} with NNs, for \Cref{alg:batch}~($\nicefrac{1}{\sqrt{m}}$), our performances are similar, whatever the value of $K$, but still significantly better than ERM.
+In any case, note that for every dataset, there exists a value of $K$ and such that our algorithm attains either similar or significantly better performances than ERM on every dataset, which shows the relevance of our learning algorithm to ensure a good generalisation ability.
+Moreover, there is no obvious choice for the parameters $\varepsilon$.
+For instance, in \Cref{tab:expe-2,tab:expe-3}, for the \textsc{segmentation} dataset, the parameters $K=1,\varepsilon=\frac{1}{m}$ are optimal (in terms of test risks) for both models. 
+As $K=1$ means that our single prior is data-free, this shows that the intrinsic structure of \textsc{segmentation} makes it less sensitive to both the information contained in the prior ($K=1$ meaning data-free prior) and the place of the prior itself ($\varepsilon=1/m$ meaning that we give less weight to the regularisation within our optimisation procedure).
+On the contrary, in Table \Cref{tab:expe}, the \textsc{yeast} dataset performs significantly better when $\varepsilon=1/\sqrt{m} (K=0.2\sqrt{m})$, exhibiting a positive impact of our data-dependent priors.
+
+\subsection{Experiments on classical regularisation methods}
+
+We perform additional experiments to see the performance of the weight decay, \ie, the L2 regularisation on the weights; the results are presented in \Cref{tab:expe-4}.
+Moreover, notice that the 'distance to initialisation' $\|\wbf-\wbf_0\|$ (where $\wbf_0$ is the weights initialized randomly) is a particular case of \Cref{alg:batch} when $K=1$ (\ie, we treat the data as a single batch, and the prior is the data-free initialisation); the results are in \Cref{tab:expe-2,tab:expe-3}.
+
+\textbf{Analysis of our results.}
+This experiment on the weight decay demonstrates that on a few datasets (namely \textsc{sensorless} and \textsc{yeast}), when our predictors are neural nets, the weight decay regularisation fails to learn while ours succeeds, as shown in \Cref{tab:expe}.
+In general, this table shows that, on most of the datasets, considering data-dependent priors leads to sharper results.
+This shows the efficiency of our method compared to the 'distance to initialisation' regularisation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[ht]
+    \caption{Performance of \Cref{alg:batch} compared to ERM on different datasets for neural network models.
+We consider $\varepsilon=\nicefrac{1}{m}$ and $\varepsilon=\nicefrac{1}{\sqrt{m}}$, with $K=\alpha\sqrt{m}$ and $\alpha\in\{0,0.4,0.6,0.8,1\}$.
+We plot the empirical risk $\Rfrak_{\S}(h)$ with its associated test risk $\Rfrak_{\D}(h)$.}
+    \begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=1$}
+        \include{sup_nn_batch_0}
+       \label{tab:sup_nn_batch_0}
+    \end{subtable}\end{adjustbox}%
+    \hspace{1.0cm}\begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=0.4\sqrt{m}$}
+        \include{sup_nn_batch_4}
+        \label{tab:sup_nn_batch_4}
+    \end{subtable}\end{adjustbox}
+    \begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=0.6\sqrt{m}$}
+        \include{sup_nn_batch_6}
+        \label{tab:sup_nn_batch_6}
+    \end{subtable}\end{adjustbox}%
+    \hspace{1.0cm}\begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=0.8\sqrt{m}$}
+        \include{sup_nn_batch_8}
+        \label{tab:sup_nn_batch_8}
+    \end{subtable}\end{adjustbox}
+    \begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=\sqrt{m}$}
+        \include{sup_nn_batch_10}
+        \label{tab:sup_nn_batch_10}
+    \end{subtable}\end{adjustbox}%
+    \hspace{1.0cm}\begin{adjustbox}{width=0.48\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{ERM}
+        \include{sup_nn_batch_ERM}
+        \label{tab:sup_nn_batch_ERM}
+    \end{subtable}\end{adjustbox}%
+    \label{tab:expe-2}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[ht]
+    \caption{Performance of \Cref{alg:batch} compared to ERM on different datasets for linear models.
+We consider $\varepsilon=\nicefrac{1}{m}$ and $\varepsilon=\nicefrac{1}{\sqrt{m}}$, with $K=\alpha\sqrt{m}$ and $\alpha\in\{0,0.4,0.6,0.8,1\}$.
+We plot the empirical risk $\Rfrak_{\S}(h)$ with its associated test risk $\Rfrak_{\D}(h)$.}
+    \begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=1$}
+        \include{sup_linear_batch_0}
+       \label{tab:sup_linear_batch_0}
+    \end{subtable}\end{adjustbox}%
+    \hspace{1.0cm}\begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=0.4\sqrt{m}$}
+        \include{sup_linear_batch_4}
+        \label{tab:sup_linear_batch_4}
+    \end{subtable}\end{adjustbox}
+    \begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=0.6\sqrt{m}$}
+        \include{sup_linear_batch_6}
+        \label{tab:sup_linear_batch_6}
+    \end{subtable}\end{adjustbox}%
+    \hspace{1.0cm}\begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=0.8\sqrt{m}$}
+        \include{sup_linear_batch_8}
+        \label{tab:sup_linear_batch_8}
+    \end{subtable}\end{adjustbox}
+    \begin{adjustbox}{width=0.45\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{$K=\sqrt{m}$}
+        \include{sup_linear_batch_10}
+        \label{tab:sup_linear_batch_10}
+    \end{subtable}\end{adjustbox}%
+    \hspace{1.0cm}\begin{adjustbox}{width=0.48\columnwidth}
+    \begin{subtable}{0.5\textwidth}
+        \centering
+        \caption{ERM}
+        \include{sup_linear_batch_ERM}
+        \label{tab:sup_linear_batch_ERM}
+    \end{subtable}\end{adjustbox}%
+    \label{tab:expe-3}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[ht]
+    \caption{Performance of ERM with weight decay (with the L2 regularisation) for linear and neural network models.}
+    \centering
+    \begin{adjustbox}{width=0.48\columnwidth}
+\begin{subtable}{0.5\textwidth}
+    \centering
+    \caption{Linear}
+    \include{sup_linear_batch_L2}
+    \label{tab:sup_linear_batch_L2}
+\end{subtable}\end{adjustbox}
+\hfill
+\begin{adjustbox}{width=0.48\columnwidth}
+\begin{subtable}{0.5\textwidth}
+    \centering
+    \caption{NN}
+    \include{sup_nn_batch_L2}
+    \label{tab:sup_nn_batch_L2}
+\end{subtable}\end{adjustbox}
+\label{tab:expe-4}
+\end{table}
+
+\end{document}
