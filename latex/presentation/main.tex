@@ -1,0 +1,201 @@
+\documentclass{presentation}
+\input{notations}
+
+\pdfinfo{
+  /Title (Learning via Wasserstein-Based High Probability Generalisation Bounds)
+  /Author (Paul Viallard)
+  /Subject ()
+
+/Keywords ()
+}
+
+\title{Learning via Wasserstein-Based High Probability Generalisation Bounds}
+
+\author{\vspace{-1.5cm}
+
+Paul Viallard\textnormal{\textsuperscript{*,1}, Maxime Haddouche\textsuperscript{*,2,3,4}, Umut Şimşekli\textsuperscript{1}, Benjamin Guedj\textsuperscript{2,3}}}
+
+\institute{
+\vspace{0.8cm}
+
+\textsuperscript{*} These authors contributed equally to this work\\
+\textsuperscript{1} INRIA Paris\\
+\textsuperscript{2} INRIA Lille\\
+\textsuperscript{3} University College London\\
+\textsuperscript{4} Université de Lille\\
+}
+
+\date{\vspace{0.5cm}
+
+{\bf NeurIPS 2023}}
+
+\begin{document}
+
+\begin{xplain}
+  \titlepage
+\end{xplain}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{xframe}{(Special case of) PAC-Bayesian learning}
+
+\vspace{-0.5cm}
+
+\begin{block}{}
+{\bf PAC-Bayesian learning}\\[0.1cm]
+Learning a distribution $\Q$ over models from the data and a prior distribution $\P$
+\end{block}
+
+\vspace{-0.2cm}
+
+\begin{figure}
+  \includestandalone[width=0.8\linewidth]{figures/intro}
+\end{figure}
+
+\vspace{-0.6cm}
+
+\begin{block}{}
+{\bf PAC-Bayesian generalisation bounds in a nutshell}\\[0.0cm]
+{\footnotesize With probability at least $1-\delta$}\\[-0.7cm]
+\begin{align*}
+\text{performance gap}(\Q) \le \text{bound}\Big(\text{distance}(\Q, \P), \tfrac{1}{m}, \ln\tfrac{1}{\delta}\Big)
+\end{align*}
+\vspace{-0.7cm}
+\end{block}
+\end{xframe}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{xframe}{About the KL divergence}
+
+  \vspace{0.5cm}
+
+  \begin{figure}
+  \includestandalone[width=1.0\linewidth]{figures/KL_inf}
+  \end{figure}
+
+  \vspace{-0.5cm}
+  \begin{block}{}
+  {\bf Drawback:} KL-based PAC-Bayesian bounds (majority of the literature) fail when $\Q$ and $\P$ have disjoint supports \dots
+  \end{block}
+\end{xframe}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{xframe}{About the Wasserstein distance}
+
+  \begin{block}{}
+  \centering
+  {\bf It is possible to obtain PAC-Bayesian bounds with the Wasserstein distance!}
+  \end{block}
+  
+  \begin{figure}
+\includestandalone[width=0.8\linewidth]{figures/ot}
+  \end{figure}
+\end{xframe}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{xframe}{PAC-Bayesian bound for batch learning}
+
+\vfill
+
+\begin{block}{}
+{\bf PAC-Bayesian bound for batch learning}~{\scriptsize (special case)}
+
+\vspace{0.2cm}
+
+\begin{itemize}
+    \item The loss $\loss$ is $L$-Lipschitz and belongs in $[0,1]$.
+    \item The dataset $\S = \{ \z_i \in \Z \}_{i=1}^{m}$ is split into $K$ parts $\S_1,\dots,\S_K$. 
+\end{itemize}
+
+\hspace{0.45cm}{\footnotesize With probability at least $1-\delta$}\\[-0.7cm]
+\begin{align*}
+\underbrace{\EE_{h\sim\Q}\Big[ \EE_{\z\sim\D}\loss(h,\z)- \frac{1}{m}\sum_{i=1}^{m}\loss(h,\z_i) \Big]}_{\text{performance gap}(\Q)} &\le \underbrace{\sum_{i=1}^{K} \frac{2|\S_i|L}{m} \W(\Q, \P_{i,\S})}_{\text{distance}(\Q, \P)} + \underbrace{\sum_{i=1}^{K} \sqrt{\frac{|\S_i|\ln\frac{K}{\delta}}{2m^2}}}_{\text{must be close to $0$}}\\
+\text{performance gap}(\Q) &\le \text{bound}\Big(\text{distance}(\Q, \P), \tfrac{1}{m}, \ln\tfrac{1}{\delta}\Big)
+\end{align*}
+
+\vspace{-0.2cm}
+
+where $\P_{i,\S}$ {\it does not} depend on $\S_i$.
+\end{block}
+
+\vfill
+
+\end{xframe}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{xframe}{PAC-Bayesian bound for online learning}
+
+\vfill
+
+\begin{block}{}
+{\bf PAC-Bayesian bound for online learning}~{\scriptsize (special case)}
+
+
+\vspace{0.2cm}
+
+\begin{itemize}
+    \item The loss is $\loss$ to be in $[0,1]$ and $L$-Lipschitz
+    \item The data arrives sequentially $\S=(\z_i)_{i=1,\dots,m}$
+\end{itemize}
+
+\hspace{0.45cm}{\footnotesize With probability at least $1-\delta$}\\[-0.7cm]
+\begin{align*}
+\underbrace{\frac{1}{m}\sum_{i=1}^m \EE_{h_i\sim \Q_{i}} \Big[\EE[\loss(h_i,\z_i) \mid \Fcal_{i-1}] - \loss(h_i,\z_i) \Big]}_{\text{performance gap}(\Q)}  &\le \underbrace{\frac{2L}{m}\sum_{i=1}^{m}\W(\Q_{i}, \P_{i,\S})}_{\text{distance}(\Q, \P)} + \underbrace{\sqrt{\frac{2\ln\LP\frac{1}{\delta}\RP}{m}}}_{\text{close to $0$}}\\
+\text{performance gap}(\Q) &\le \text{bound}\Big(\text{distance}(\Q, \P), \tfrac{1}{m}, \ln\tfrac{1}{\delta}\Big)
+\end{align*}
+
+where $\P_{i,\S}$ {\it does not} depend on $(\z_j)_{j=i,\dots,m}$.
+\end{block}
+
+\vfill
+
+\end{xframe}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{xframe}{Other contributions in the paper}
+
+\vfill
+
+\begin{block}{}
+{\bf Other contributions in the paper:}\\[0.5cm]
+\begin{itemize}
+    \item PAC-Bayesian bounds for heavy-tailed losses (possibly unbounded)\\[0.5cm]
+    \item Derive new learning algorithms (batch and online learning)\\[0.2cm]
+    \item[] $\hookrightarrow$ Inspired from our theoretical bounds\\[0.2cm]
+    \item[] $\hookrightarrow$ Better generalisation than ERM and classical regularisations 
+\end{itemize}
+
+\end{block}
+
+\vfill
+
+\end{xframe}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+
+\begin{xtitle}
+
+\vspace{2.0cm}
+{\bf Thank you for your attention!}\\
+
+\vspace{1.0cm}
+{\bf Link to the paper:}\\
+\href{https://arxiv.org/abs/2306.04375}{{\tt https://arxiv.org/abs/2306.04375}}\\
+
+\vfill
+
+\end{xtitle}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+\end{document}

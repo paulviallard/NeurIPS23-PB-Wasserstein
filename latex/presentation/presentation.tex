@@ -1,0 +1,61 @@
+\usepackage{tikz}
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{xspace}
+\usepackage{stmaryrd}
+\usepackage[misc]{ifsym}
+\usepackage{etoolbox}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{graphicx}
+
+\graphicspath{{figures/}}
+\RequirePackage[default]{opensans}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% defcommand
+
+\makeatletter
+\newcommand{\defcommand}[2]{%
+  \ifdefined#1%
+    \renewcommand{#1}{#2}%
+  \else%
+    \newcommand{#1}{#2}%
+  \fi
+}
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notations
+
+\input{notations}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% xcolor options
+% Paul Tol's  "Vibrant" color scheme
+% https://personal.sron.nl/~pault/data/colourschemes.pdf
+
+\definecolor{blue}{HTML}{0077BB}
+\definecolor{cyan}{HTML}{33BBEE}
+\definecolor{green}{HTML}{009988}
+\definecolor{orange}{HTML}{EE7733}
+\definecolor{red}{HTML}{CC3311}
+\definecolor{magenta}{HTML}{EE3377}
+\definecolor{grey}{HTML}{BBBBBB}
+\definecolor{blockgrey}{RGB}{245, 245, 245}
+
+\newcommand\white[1]{\textcolor{white}{#1}}
+\newcommand\black[1]{\textcolor{black}{#1}}
+\newcommand\blue[1]{\textcolor{blue}{#1}}
+\newcommand\cyan[1]{\textcolor{cyan}{#1}}
+\newcommand\green[1]{\textcolor{green}{#1}}
+\newcommand\orange[1]{\textcolor{orange}{#1}}
+\newcommand\red[1]{\textcolor{red}{#1}}
+\newcommand\magenta[1]{\textcolor{magenta}{#1}}
+\newcommand\grey[1]{\textcolor{grey}{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

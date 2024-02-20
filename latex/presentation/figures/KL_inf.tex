@@ -1,0 +1,17 @@
+\documentclass[]{standalone}
+\input{presentation}
+
+\begin{document}
+\fontsize{10}{12}\selectfont
+
+\begin{tikzpicture}[]
+
+\node at (0,0) {\includegraphics[scale=1.0]{figures/distribution_prior.pdf}};
+\node at (0,-3.5) {\includegraphics[scale=1.0]{figures/distribution_post.pdf}};
+
+\draw[->, line width=0.05cm] (-6.5, 0.5) to[out=180,in=180] (-6.5, -3.25);
+
+\node[rotate=0, scale=1.5] at (-10.0, -1.5) {$\underbrace{\KL(\Q\|\P)}_{\text{distance}(\Q, \P)} = +\infty$};
+
+\end{tikzpicture}
+\end{document}
