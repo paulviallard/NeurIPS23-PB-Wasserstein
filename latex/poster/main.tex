@@ -1,0 +1,257 @@
+\documentclass[A1]{poster}
+\input{notations}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Max poster: 24 inches wide x 36 inches high -> 60,96cm wide x 91,44cm high
+% A0 poster: 33.11 inches wide x 46.81 inches high -> 84,1cm wide x 118,9cm high
+% A1 poster: 23.39 inches wide x 33.11 inches high -> 59,4cm x 84,1cm high
+
+\usepackage{tikz}
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{xspace}
+\usepackage{stmaryrd}
+\usepackage[misc]{ifsym}
+\usepackage{etoolbox}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{graphicx}
+
+\definetitlestyle{sampletitle}{width=\paperwidth}{
+\node[] at (\titleposleft+6cm,\titleposbottom+2cm) {\includegraphics[height=0.025\textheight]{figures/inria.png}};
+\node[] at 
+(\titleposleft+15cm,\titleposbottom+2.0cm) {\includegraphics[height=0.02\textheight]{figures/UCL.pdf}};
+\node[] at (\titleposleft+76cm,\titleposbottom+2cm) {\includegraphics[height=0.04\textheight]{figures/ULille.png}};
+}
+\usetitlestyle{sampletitle}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\settitle{%
+    \vspace{-0.7cm}
+    \centering{\huge\color{blockblue}\bf\MakeUppercase{Learning via Wasserstein-Based High Probability Generalisation Bounds}}\\[1.2cm]
+    {\color{blockblue}\LARGE Paul Viallard\textnormal{\textsuperscript{1}, Maxime Haddouche \textsuperscript{2,3,4}, Umut Simsekli\textsuperscript{1}, Benjamin Guedj\textsuperscript{2,3}}}\\[0.4cm]
+    \textsuperscript{1} INRIA Paris \hspace{0cm} \textsuperscript{2} INRIA Lille  \textsuperscript{3} University College London\hspace{0cm} \\ \textsuperscript{4} Université de Lille
+    \vspace{0.5cm}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\maketitle
+
+\begin{columns}
+\column{1.0}
+\myblock[greyblock]{Notations \& (Special Case of) PAC-Bayesian Learning}{
+
+\vspace{-1.5cm}
+
+{\bf We are interested in theoretical guarantees on the number of errors on new examples}
+
+{{\bf Theoretical guarantee (generalisation bound):}}
+  $\text{{\it true risk}(\black{model})} - \text{{\it empirical risk}(\black{model})} \le \text{{\it complexity}(\black{model, number of examples})}$
+
+\vspace{0.5cm}
+\hsep
+\vspace{1.0cm}
+
+\begin{minipage}{0.35\linewidth}
+\begin{itemize}
+    \item Example $z = (\xbf, y) \in \Xcal \times \Ycal = \Zcal$
+    \item Learning sample $\Scal = \big\{ z_i{=}(\xbf_i, y_i)\big\}_{i=1}^{m}$
+    \item Polish hypothesis space $(\Hcal,d)$\\[-0.2cm] {\small ($d$ is a distance between two hypotheses)}
+    \item Hypothesis $h\in\Hcal$
+    \item Prior $\P$ and posterior $\Q$ distributions over $\Hcal$
+    \item Loss $\ell: \Hcal\times\Zcal\to \Rbb$, \textit{possibly heavy-tailed}
+    \item Population risk: $\Risk_{\Dcal}(\black{h}) = \EE_{z\sim\Dcal} \ell(h, z)$
+    \item Empirical risk: $\hat{\Risk}_{\Scal}(\black{h}) = \frac{1}{m}\sum_{i=1}^{m}\ell(h, z_i)$
+\end{itemize}
+
+\end{minipage}
+\begin{minipage}{0.65\linewidth}
+  \vspace{-14cm}
+  {\bf Objective:} \scalebox{0.95}{Learning a distribution $\Q$ over models from the data and a prior distribution $\P$}
+  \vspace{-2cm}
+\end{minipage}
+
+  \begin{minipage}{0.35\linewidth}
+  \hspace{0.0cm}\vspace{-11.0cm}
+  \end{minipage}
+  \begin{minipage}{0.50\linewidth}
+  \vspace{-13.2cm}
+  \includestandalone[width=1.0\linewidth]{figures/intro}
+  \end{minipage}
+  \begin{minipage}{0.14\linewidth}
+  \vspace{-11.0cm}
+  \includestandalone[width=1.0\linewidth]{figures/supervised_setting}
+  \end{minipage}
+
+  \vspace{-0.5cm}
+  \hsep
+  \vspace{0.5cm}
+
+  \hspace{3cm}{\bf Catoni's bound}~{\small (subgaussian losses)}: With probability $1{-}\delta$ over $\Scal\sim\Dcal^m$,\ \ for any $\Q$ on $\Hcal$,\hspace{1cm}\scalebox{1}{$\displaystyle\EE_{h\sim\Q}\LB \Risk_{\Dcal}(h) - \hat{\Risk}_{\Scal}(h) \RB \le \frac{1}{\sqrt{m}}\LB\KL(\Q,\P)+\ln\frac{1}{\delta} + \frac{1}{2}\RB$}
+  \vspace{-1.0cm}
+}
+\end{columns}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{columns}
+\column{1.0}
+\myblock[greyblock]{A Major Limitation: Absolute Continuity}{
+\vspace{-2.0cm}\hspace{3.0cm}
+\begin{minipage}{0.45\linewidth}
+\vspace{-2.4cm}
+\scalebox{0.95}{{\bf Problem:} If no absolute continuity of $\Q$ \emph{w.r.t.} $\P$,
+$\mathrm{KL}(\Q,\P)= +\infty$}\\[-1.5cm]
+\begin{center}
+\includestandalone[width=1.0\linewidth]{figures/KL_inf}
+\end{center}
+\end{minipage}
+\hspace{1.0cm}
+\begin{minipage}{0.55\linewidth}
+\vspace{-0.0cm}
+\scalebox{0.9}{{\bf Solution:} Bound based on the Wasserstein distance $\W(\Q,\P)$ {\small \citep{amit2022integral}}}
+
+\vspace{-0.5cm}
+{\footnotesize (Example: for $h_1\neq h_2$, $\W( \delta_{h_1},\delta_{h_2}){=}d(h_1,h_2)$, $\KL(\delta_{h_1},\delta_{h_2}){=}{+}\infty$)}
+\begin{center}
+
+\vspace{-0.4cm}
+\hspace{-3.0cm}\includestandalone[width=0.72\linewidth]{figures/ot}
+\end{center}
+\end{minipage}
+
+\vspace{-1.0cm}
+}
+\end{columns}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{columns}
+\column{1.0}
+\myblock[greyblock]{Contribution: Wassertein PAC-Bayes Bounds with Heavy-Tailed Losses}{
+\vspace{-1.5cm}
+
+\textbf{Context:} $\ell\geq 0$ is $L$-lipschitz. For prior $\P$, assumption $\texttt{BM}_2(\P,\mathcal{F})$: $\EE_{h\sim \P}\EE[\ell^2(h,z)\mid\mathcal{F}]\leq 1$ {\small (\emph{bounded order 2 conditional moments})} \\
+\hsep
+\vspace{1.0cm}
+\begin{minipage}{0.5\linewidth}
+\textbf{\underline{Batch} Wasserstein PAC-Bayesian Bound}\\[0.5cm]
+\textbf{Focus:} Learning $\Q$ using all $\Scal$ directly.\\
+\textbf{Assumptions:}
+\begin{itemize}
+    \item $\Scal\sim\mathcal{D}^m$ \emph{i.i.d.}, splited in $K$ parts $\Scal_1,\cdots\Scal_K$
+    \item For any $i$, the prior $\P_i$ depends on $\Scal/\Scal_i$ and $\texttt{BM}_2(\P_i,\mathcal{F}_0)$ holds
+\end{itemize}
+With probability at least $1-\delta$ over $\Scal$, for any $\Q$ on $\Hcal$:\\[-1.0cm]
+
+\hspace{1.0cm}$\displaystyle\EE_{h\sim\Q}\Big[ \Risk_{\Dcal}(h) - \hat{\Risk}_{\Scal}(h) \Big] \le \sum_{i=1}^{K} \frac{2|\Scal_i|L}{m} \W(\Q, \P_{i,\Scal}) + \sum_{i=1}^{K} \sqrt{\frac{2|\Scal_i|\ln\frac{K}{\delta}}{m^2}}$
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+
+\textbf{\underline{Online} Wasserstein PAC-Bayesian Bound}\\[0.5cm]
+\textbf{Focus:} Learning $(\Q_i,\P_i)_{i\geq 1}$ sequentially. \\
+\textbf{Assumptions:}
+\begin{itemize}
+    \item \textit{No assumption about $\Scal$}
+    \item Prior $\P_i$ is $\mathcal{F}_{i-1}$-measurable and $\texttt{BM}_2(\P_i,\mathcal{F}_{i-1})$ holds
+\end{itemize}
+With probability at least $1-\delta$ over $\Scal$, for any $\Q$ on $\Hcal$:\\[-1.0cm]
+
+\hspace{1.0cm}$\displaystyle\frac{1}{m}\sum_{i=1}^m \EE_{h_i\sim \Q_{i}} \Big[\EE[\ell(h_i,z_i) \mid \mathcal{F}_{i-1}] - \ell(h_i,z_i) \Big]  \le \frac{2L}{m}\sum_{i=1}^{m}\W(\Q_{i}, \P_{i,\Scal}) + \sqrt{\frac{2\ln\frac{1}{\delta}}{m}}$
+\end{minipage}
+
+\vspace{0.5cm}
+\hsep
+
+\vspace{0.7cm}\hspace{2.0cm}
+\begin{minipage}{0.51\linewidth}
+{\bf Advantages: }\\[0.1cm]
+\scalebox{0.9}{
+\begin{itemize}
+    \item[\green{\bf +}] Bound holds for any (Polish) hypothesis space $\Hcal$
+    \item[\green{\bf +}] Bound for both batch/online settings with heavy-tailed losses
+\end{itemize}}
+\end{minipage}
+\begin{minipage}{0.49\linewidth}
+{\bf Drawbacks: }\\[0.1cm]
+\scalebox{0.9}{
+\begin{itemize}
+    \item[\red{\bf --}] Similarly to \citet{amit2022integral}, no convergence rate to attenuate $\W$
+
+\end{itemize}}
+\end{minipage}
+\vspace{-1.0cm}
+}
+\end{columns}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{columns}
+\column{1.0}
+\myblock[greyblock]{Contribution: Theory-driven Learning Algorithms with Wasserstein Regularisation}{
+\vspace{-2.2cm}
+\textbf{Context:} $h_\wbf$ is parametrised by a vector $\wbf$ (\emph{e.g.}, the weights of a neural network with fixed architecture and activation functions)
+
+\vspace{-0.3cm}
+\hsep
+\vspace{0.7cm}
+
+\begin{minipage}{0.5\linewidth}
+\textbf{\underline{Batch} learning algorithm}\\[-0.5cm]
+
+\begin{center}
+ $\textstyle\argmin_{h_{\wbf}\in\Hcal}\LC \hat{\Risk}_{\Scal}(h_{\wbf}) + \varepsilon\LB\sum_{i=1}^{K} \frac{|\Scal_i|}{m} d\LP h_\wbf,h_{\wbf_i}\RP\RB\RC$
+ \end{center}
+
+\vspace{0.3cm}
+
+{\small (prior weights $\wbf_1,\cdots,\wbf_k$ , hyper-parameter $\epsilon>0$)}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+\textbf{\underline{Online} learning algorithm}\\
+At each time $i$, update $h_{\wbf_i}:=h_i$ using $z_i$ and $h_{\wbf_{i-1}}$
+\vspace{0.5cm}
+
+\begin{center}
+$\displaystyle\forall i \geq 1,\ \ h_{\wbf_i}\in \argmin_{h_{\wbf}\in \Hcal} \ell(h_{\wbf}, z_i) +d\LP h_{\wbf},h_{\wbf_{i-1}}\RP \ \ \text{s.t.}\ \  d\LP h_{\wbf},h_{\wbf_{i-1}}\RP \le 1$
+\end{center}
+\end{minipage}
+\vspace{-1.0cm}
+}
+\end{columns}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{columns}
+    \column{0.5}
+    \myblock[greyblock]{Conclusion}{
+
+    \vspace{-1.5cm}
+\begin{itemize}
+    \item New Wasserstein PAC-Bayes bounds for heavy-tailed losses
+    \item New learning algorithms for batch and online learning
+    \item Those algorithms outperform ERM and classical regularisation on many datasets
+\end{itemize}
+    
+    }
+    \column{0.25}
+    \myblock[greyblock]{References}{
+    \vspace{-6.0cm}
+    \printbibliography[title={\ }]
+    }
+    \column{0.25}
+    \myblock[greyblock]{Download the paper}{
+    \vspace{-2.5cm}
+    \hspace{3.5cm}\includegraphics[width=0.5\linewidth]{figures/qrcode.png}
+    }
+\end{columns}
+
+\end{document}

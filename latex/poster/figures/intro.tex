@@ -1,0 +1,30 @@
+\documentclass[]{standalone}
+\input{poster}
+
+\begin{document}
+\fontsize{10}{12}\selectfont
+
+\begin{tikzpicture}[]
+
+\begin{scope}[xshift=0cm]
+
+\node at (0,0) {\includegraphics[scale=1.0]{prior_dist.pdf}};
+\node[scale=1.5] at (2.1, 1.2) {$h_1$};
+\node[scale=1.5] at (-2.9, 0.0) {$h_2$};
+\node[scale=1.5] at (1.0, -1.3) {$h_3$};
+\node[scale=1.5] at (0.0, -3.8) {Prior distribution $\P$};
+\end{scope}
+
+\node[scale=1.5] at (6.5, 0.5) {Learning};
+\draw[->, line width=0.05cm] (5.0, 0.0) to (8.0, 0.0);
+
+\begin{scope}[xshift=14cm]
+\node at (0,0) {\includegraphics[scale=1.0]{post_dist.pdf}};
+\node[scale=1.5] at (-0.8, 0.5) {$h_4$};
+\node[scale=1.5] at (1.9, 0.0) {$h_5$};
+\node[scale=1.5] at (0.0, -3.8) {Posterior distribution $\Q$};
+\node[scale=1.5] at (4.75, -3.8) {Loss};
+\end{scope}
+
+\end{tikzpicture}
+\end{document}
